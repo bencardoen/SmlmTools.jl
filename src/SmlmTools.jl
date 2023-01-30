@@ -338,7 +338,7 @@ function track_sample_mean(pts, meta, interval, maxframe)
     @showprogress for (i,t) in enumerate(range(Int(m+span),Int(M-span)))
         mks=(meta[:,2] .> t-span) .& (meta[:,2] .< t+span)
         xs = PTS[mks,:]
-        sx = sample_mean(xs)
+        sx = sample_mean(xs; seed=i+1)
         _m = mean(sx, dims=1)
         ms[i, :] .= _m[1, 1:3]
         ts[i] = t
