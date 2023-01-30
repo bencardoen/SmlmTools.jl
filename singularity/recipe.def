@@ -1,0 +1,61 @@
+BootStrap: localimage
+From: bcvcsert_base_f35j17.sif
+
+%files
+    SmlmTools.jl.zip /opt/SmlmTools.jl.zip
+
+%post
+    export JLMJV=1.7
+    export JLV=$JLMJV.1
+    export PYTHON=`which python3`
+    export JULIA_TGZ=julia-$JLV-linux-x86_64.tar.gz
+    export PATH=/opt/julia/julia-$JLV/bin:$PATH
+    export JULIA_DEPOT_PATH=/opt/juliadepot
+    mkdir -p $JULIA_DEPOT_PATH
+
+    ## Setup local package
+    export PKGNAME="SmlmTools"
+    cd /opt && unzip $PKGNAME.jl.zip
+    export LOCALPKG=/opt/$PKGNAME.jl
+    cd $LOCALPKG
+    julia --project=$LOCALPKG -e 'using Pkg; Pkg.build(); Pkg.instantiate()'
+    julia --project=$LOCALPKG -e 'using SmlmTools'
+    echo "Setting up precompile"
+    #This one runs the tests, so everything that has test coverage is optimized
+    julia --project=$LOCALPKG --trace-compile=dc_precompile.jl scripts/precompile.jl
+    chmod u+x runjulia.sh
+
+    #Compute precompile
+    julia --project=$LOCALPKG scripts/setupimage.jl
+    rm -rf /opt/juliadepot/logs
+    ln -s /dev/shm/ /opt/juliadepot/logs
+
+    ## Cleanup
+    #dnf remove -y wget unzip
+
+%environment
+    export LC_ALL=C
+    export LOCALPKG=/opt/SmlmTools.jl
+    export JLMJV=1.7
+    export PYTHON="/usr/bin/python3"
+    export JLV=$JLMJV.1
+    export PATH=/opt/julia/julia-$JLV/bin:$PATH
+    export JULIA_DEPOT_PATH=/opt/juliadepot
+
+%runscript
+    echo "Executing SmlmTools with arguments $@"
+    /opt/SmlmTools.jl/runjulia.sh "$@"
+
+%labels
+    Author Ben Cardoen, bcardoen@sfu.ca
+    Version v0.0.1
+
+%help
+    This is a container to offer SmlmTools without altering the local user environment, for testing purposes.
+    Usage (interactively):
+    singularity shell image.sif
+    Singularity> julia --project=/opt/SmlmTools.jl
+    or
+    singularity exec image.sif julia --project=/opt/SmlmTools.jl <yourcode>
+    or for fastest execution
+    singularity exec image.sif julia --project=/opt/SmlmTools.jl --sysimage=/opt/SmlmTools.jl/sys_img.so <yourcode.jl>
