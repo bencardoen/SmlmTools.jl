@@ -91,21 +91,37 @@ end
 function aszero(xs)
 	return zeros(eltype(xs), size(xs))
 end
+#
+# function detect_bead(coordsc1, coordsc2, nm_per_px)
+#     qx = max(maximum(coordsc1), maximum(coordsc2))
+#     @debug "Maximum range = $qx"
+# 	@error "FIx me"
+# 	@info "Use findbead on both, check overlap"
+#     i1, i2 = [project_image(c, nm_per_px; mx=qx, remove_bead=true, log_scale=false, σnm=10) for c in [coordsc1, coordsc2]]
+#     d1, d2 = i1[end], i2[end]
+#     un = d1 .+ d2
+#     if maximum(un) < 2
+#         @warn "No overlapping bead mask found!!"
+#         throw(ArgumentError("No overlapping bead found"))
+#         return d1, d2, un, i1, i2
+#     else
+#         @debug "Overlapping bead mask found"
+#         return d1, d2, un, i1, i2
+#     end
+# end
 
 function detect_bead(coordsc1, coordsc2, nm_per_px)
     qx = max(maximum(coordsc1), maximum(coordsc2))
     @debug "Maximum range = $qx"
-	@error "FIx me"
-	@info "Use findbead on both, check overlap"
     i1, i2 = [project_image(c, nm_per_px; mx=qx, remove_bead=true, log_scale=false, σnm=10) for c in [coordsc1, coordsc2]]
     d1, d2 = i1[end], i2[end]
-    un = d1 .+ d2
+	un = Int8.(d1) .+ Int8.(d2)
     if maximum(un) < 2
         @warn "No overlapping bead mask found!!"
         throw(ArgumentError("No overlapping bead found"))
         return d1, d2, un, i1, i2
     else
-        @debug "Overlapping bead mask found"
+        @info "Overlapping bead mask found"
         return d1, d2, un, i1, i2
     end
 end
@@ -174,7 +190,7 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     X = (minx-1)*nm_per_px, (maxx+1)*nm_per_px
     Y = (miny-1)*nm_per_px, (maxy+1)*nm_per_px
 
-    @info "Fiducal location (nm): X $X Y $Y"
+    @info "Estimated Fiducal location (nm): X $X Y $Y"
     ptrf_fiducial, ptrf_meta = roi_pts(ptrf_pts, X, Y, ptrf_meta_all)
     cav1_fiducial, cav1_meta = roi_pts(cav1_pts, X, Y, cav1_meta_all)
 
@@ -292,22 +308,10 @@ function project_image(coords3d, nm_per_px; mx=nothing, remove_bead=false, log_s
     dense = copy(image)
     beadmask = aszero(image)
     if remove_bead
-		@error "TODO add find bead function"
-        @debug "Removing bead"
-		bds = findbeads(image, beads)
-        z=aszero(image)
-        z[image .>= maximum(image)] .= 1
-        zi = ImageFiltering.imfilter(z, ImageFiltering.Kernel.gaussian((5, 5)))
-        EM = tomask(ImageMorphology.dilate(image))
-        ccs = Images.label_components(EM)
-        for ind in component_indices(ccs)[2:end]
-            if sum(z[ind]) >= 1
-                beadmask[ind] .= 1
-            end
-        end
+		@info "Detecting bead"
+		beadmask = findbeads(image, beads)
+        beadmask = tomask(ImageMorphology.dilate(beadmask))
         image[beadmask .>= 1] .= 0
-		### generate beadmask
-		### set image[beadmask to zero]
     end
     if log_scale
         @debug "Log transform of density"
@@ -316,7 +320,6 @@ function project_image(coords3d, nm_per_px; mx=nothing, remove_bead=false, log_s
     σ= σnm/nm_per_px
     @debug "Gaussian σ $(σnm) → $(σ) px"
     qz=quantile(logz.(image[image .> 0])[:], 0.95)
-    # image_mx = image ./ maximum(image)
     image[logz.(image) .>= qz] .= exp(qz)
     smooth =  ImageFiltering.imfilter(image, ImageFiltering.Kernel.gaussian((σ, σ)))
     return image, smooth, dense, beadmask

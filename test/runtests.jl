@@ -12,21 +12,27 @@ using Statistics
     @testset "Full run" begin
         @info pwd()
         t=mktempdir()
-        first="1.csv"
-        second="2.csv"
-        d = pwd()
-        if ! (isfile(first) && isfile(second))
-            @error "Failed finding $first $second in $(pwd())"
-            if isfile(joinpath("test", first))
-                @info "changing path"
-                cd("test")
-            end
-        end
+        # Random.seed!(42)
+        # Cb1 = 100 .+ rand(100, 3) .* 50
+        # Cb12 = 20 .+ rand(100, 3) .* 50
+        # Cb2 = 105 .+ rand(100, 3) .* 60
+        # Cb22 = 10 .+ rand(100, 3) .* 50
+        # C1p = vcat(Cb1, Cb12)
+        # C2p = vcat(Cb2, Cb22)
+        # C1 = C1p
+        # C2 = C2p
+        # N=size(C1, 1)
+        # MT = rand(N, 2) * 10000
+        # MT[:,2] .= Int.(round.(MT[:, 2]))
+        # MT[:,2] .= sort(MT[:,2])
+        # using DataFrames, CSV
+        # vs = hcat([C1, MT]...)
+        # CSV.write("1p.csv", DataFrame(vs, :auto))
+        # vs = hcat([C2, MT]...)
+        # CSV.write("2p.csv", DataFrame(vs, :auto))
+        first="1p.csv"
+        second="2p.csv"
         r=align(first, second; outdir=t)
-        if pwd() != d
-            @info "resetting path to $(d)"
-            cd(d)
-        end
         @test isdir(t)
         rm(t;recursive=true)
         @test !isdir(t)
@@ -59,8 +65,16 @@ using Statistics
 
     @testset "project" begin
         Random.seed!(42)
-        C1 = 10 .+ rand(100000, 3) .* 10000
-        C2 = 10 .+ rand(100000, 3) .* 10000
+        # C1 = 10 .+ rand(100000, 3) .* 10000
+        # C2 = 10 .+ rand(100000, 3) .* 10000
+        Cb1 = 100 .+ rand(100, 3) .* 50
+        Cb12 = 20 .+ rand(100, 3) .* 50
+        Cb2 = 105 .+ rand(100, 3) .* 60
+        Cb22 = 10 .+ rand(100, 3) .* 50
+
+
+        C1 = vcat(Cb1, Cb12)
+        C2 = vcat(Cb2, Cb22)
         rs = project_image(C1, 10)
         bd=detect_bead(C1, C2, 10)[3]
         @test maximum(bd) == 2
