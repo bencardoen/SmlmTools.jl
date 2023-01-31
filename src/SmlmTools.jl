@@ -44,7 +44,7 @@ using Plots
 
 # keys = ["x", "y", "z", "dx", "dy", "dz", "amplitude", "frame_number"]
 export parseSRFile, onlineVariance, estimateError, getValues, getTimes, getMagnitude, freqCount, nmz, sample_mean, detect_bead, logz,
-project_image, adjust_to_first, align_using_time_mean, roi_pts, track_sample_mean, beadcoords, summarize_colocalization, align, nmz
+project_image, adjust_to_first, align_using_time_mean, roi_pts, findbeads, track_sample_mean, beadcoords, summarize_colocalization, align, nmz
 
 
 function sample_mean(xs; reps=100, seed=0)
@@ -63,6 +63,24 @@ function sample_mean(xs; reps=100, seed=0)
     return ms
 end
 
+function findbeads(image, nbeads=1)
+    ccs = label_components(tomask(image))
+    N = maximum(ccs)
+    vals = zeros(N)
+    for (ic, ci) in enumerate(component_indices(ccs)[2:end])
+        vals[ic] = maximum(image[ci])
+    end
+    si=sortperm(vals)
+    beads = aszero(image)
+    cind = component_indices(ccs)[2:end]
+    for i in 1:nbeads
+        m = si[end-i+1]
+        beads[cind[m]] .= 1
+    end
+    return tomask(beads)
+end
+
+
 function tomask(xs)
 	ys = copy(xs)
 	ys[ys .> 0] .= 1
@@ -77,6 +95,8 @@ end
 function detect_bead(coordsc1, coordsc2, nm_per_px)
     qx = max(maximum(coordsc1), maximum(coordsc2))
     @debug "Maximum range = $qx"
+	@error "FIx me"
+	@info "Use findbead on both, check overlap"
     i1, i2 = [project_image(c, nm_per_px; mx=qx, remove_bead=true, log_scale=false, σnm=10) for c in [coordsc1, coordsc2]]
     d1, d2 = i1[end], i2[end]
     un = d1 .+ d2
@@ -241,7 +261,7 @@ end
 
 	Assumes the bead is identifiable by repeated blinks.
 """
-function project_image(coords3d, nm_per_px; mx=nothing, remove_bead=false, log_scale=true, σnm=10)
+function project_image(coords3d, nm_per_px; mx=nothing, remove_bead=false, log_scale=true, σnm=10, beads=1)
     C1X, C1Y = coords3d[:, 1], coords3d[:, 2]
     if isnothing(mx)
         @info "Finding pixel coordinates .."
@@ -257,7 +277,9 @@ function project_image(coords3d, nm_per_px; mx=nothing, remove_bead=false, log_s
     dense = copy(image)
     beadmask = aszero(image)
     if remove_bead
+		@error "TODO add find bead function"
         @debug "Removing bead"
+		bds = findbeads(image, beads)
         z=aszero(image)
         z[image .>= maximum(image)] .= 1
         zi = ImageFiltering.imfilter(z, ImageFiltering.Kernel.gaussian((5, 5)))
@@ -292,6 +314,12 @@ function adjust_to_first(xs)
     return ys
 end
 
+"""
+	align_using_time_mean(pts_unaligned, offset, metadata)
+
+	Return aligned pts based on `offset`, an array indexed by time (`metadata[:,2]`).
+	Iow `x, y, z = offset[i]` is the correction to be applied at time i to pts_unaligned[:, metadata[:,2].==i]
+"""
 function align_using_time_mean(pts_unaligned, offset, metadata)
     pts=copy(pts_unaligned)
     met=copy(metadata)
@@ -319,32 +347,69 @@ function align_using_time_mean(pts_unaligned, offset, metadata)
     return pts
 end
 
+"""
+	roi_pts(points, X, Y, metadata)
+
+	Select a 2D ROI defined by xmin, xmax = X, ymin, ymax = Y.
+	Apply the same mask to corresponding rows in metadata.
+"""
 function roi_pts(pts, X, Y, meta)
     m=(pts[:,1] .> X[1]) .& (pts[:,1] .< X[2]) .& (pts[:,2] .> Y[1]) .& (pts[:,2] .< Y[2])
     return copy(pts[m, :]), copy(meta[m,:])
 end
-
+#
+# function track_sample_mean(pts, meta, interval, maxframe)
+#     span = Int(floor(interval/2))
+#     m=minimum(meta[:, 2])
+#     M=min(maximum(meta[:, 2]), maxframe)-1
+#     @debug "Min time $m to max time $M"
+#     PTS = copy(pts)
+#     iters = range(Int(m+span),Int(M-span)) |> collect
+#     N = length(iters)
+#     ms = zeros(N, 3)
+#     ts = zeros(N, 1)
+#     # @info "Results size $(size(ms))"
+#     @showprogress for (i,t) in enumerate(range(Int(m+span),Int(M-span)))
+#         mks=(meta[:,2] .> t-span) .& (meta[:,2] .< t+span)
+#         xs = PTS[mks,:]
+#         sx = sample_mean(xs; seed=i+1)
+#         _m = mean(sx, dims=1)
+#         ms[i, :] .= _m[1, 1:3]
+#         ts[i] = t
+#     end
+#     return ms, ts
+# end
 function track_sample_mean(pts, meta, interval, maxframe)
     span = Int(floor(interval/2))
     m=minimum(meta[:, 2])
     M=min(maximum(meta[:, 2]), maxframe)-1
-    @debug "Min time $m to max time $M"
+    @info "Min time $m to max time $M"
     PTS = copy(pts)
     iters = range(Int(m+span),Int(M-span)) |> collect
     N = length(iters)
     ms = zeros(N, 3)
     ts = zeros(N, 1)
     # @info "Results size $(size(ms))"
-    @showprogress for (i,t) in enumerate(range(Int(m+span),Int(M-span)))
+    p = Progress(N)
+    @threads for i in 1:N
+        t = iters[i]
         mks=(meta[:,2] .> t-span) .& (meta[:,2] .< t+span)
-        xs = PTS[mks,:]
+        xs = @view PTS[mks,:]
         sx = sample_mean(xs; seed=i+1)
         _m = mean(sx, dims=1)
         ms[i, :] .= _m[1, 1:3]
         ts[i] = t
+        next!(p)
     end
     return ms, ts
 end
+
+
+
+
+
+
+
 
 function beadcoords(bm)
     if maximum(bm) < 2
