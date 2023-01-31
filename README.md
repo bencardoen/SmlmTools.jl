@@ -1,8 +1,13 @@
 # SmlmTools
 
-[![codecov](https://codecov.io/gh/bencardoen/SmlmTools.jl/branch/master/graph/badge.svg?token=qFQ3PGsBBY)](https://codecov.io/gh/bencardoen/SmlmTools.jl)
+A set of tools for processing point cloud based superresolution/single molecule localization microscopy, including but not limited to 
+- point cloud to image conversion
+- fiducial tracking
+- cross-channel alignment
 
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/bencardoen/SmlmTools.jl/tree/master.svg?style=svg&circle-token=51454c475b36421e7f42be42ebcf3dea1b77c483)](https://dl.circleci.com/status-badge/redirect/gh/bencardoen/SmlmTools.jl/tree/master)
+Code Coverage [![codecov](https://codecov.io/gh/bencardoen/SmlmTools.jl/branch/master/graph/badge.svg?token=qFQ3PGsBBY)](https://codecov.io/gh/bencardoen/SmlmTools.jl)
+
+Automated testing [![CircleCI](https://dl.circleci.com/status-badge/img/gh/bencardoen/SmlmTools.jl/tree/master.svg?style=svg&circle-token=51454c475b36421e7f42be42ebcf3dea1b77c483)](https://dl.circleci.com/status-badge/redirect/gh/bencardoen/SmlmTools.jl/tree/master)
 
 ## Installation
 ```bash
@@ -19,7 +24,7 @@ julia -e 'using Pkg; Pkg.add(url="https://github.com/bencardoen/SmlmTools.jl.git
 ### 2-channel alignment
 Let F and S be the file names of the GSD bin files of either channel:
 ```bash
-julia --project=. scripts/align.jl --f [F] --s [S] --outdir [mydirectory] --colocalize --align
+julia --project=. scripts/align.jl --f [F] --s [S] --outdir [mydirectory] --colocalize --align --segment
 ```
 Adding --colocalize runs colocalization metrics.
 
