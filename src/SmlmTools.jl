@@ -152,8 +152,8 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 	    cav1= s.GSDReader(C2)
 	    cav1_pts = copy(cav1.points)
 	    cav1_pts[:,1:2].*=gsd_nmpx
-		ptrf_meta=ptrf.values
-		cav1_meta=cav1.values
+		ptrf_meta_all=ptrf.values
+		cav1_meta_all=cav1.values
 	else
 		if endswith(first, ".ascii")
 			@info "Loading from bin"
@@ -166,8 +166,8 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 		    cav1= s.GSDReader(C2, binary=false)
 		    cav1_pts = copy(cav1.points)
 		    cav1_pts[:,1:2].*=gsd_nmpx
-			ptrf_meta=ptrf.values
-			cav1_meta=cav1.values
+			ptrf_meta_all=ptrf.values
+			cav1_meta_all=cav1.values
 		else
 			@info "Loading from CSV"
 			C1 = CSV.read(first, DataFrame)
@@ -180,6 +180,7 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     @info "Detecting bead ..."
 	mx = max(maximum(ptrf_pts[:, 1:2]), maximum(cav1_pts[:, 1:2]))
     bd = detect_bead(ptrf_pts[:, 1:2], cav1_pts[:, 1:2], nm_per_px)
+	#debug : Case of 2 beads ?
 
 	_, _, _, i1, i2=bd
 	Images.save(joinpath(outdir, "C1_notaligned.tif"), N0f16.(nmz(i1[2])))
