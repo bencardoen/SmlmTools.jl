@@ -139,11 +139,26 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 		ptrf_meta=ptrf.values
 		cav1_meta=cav1.values
 	else
-		@info "Loading from CSV"
-		C1 = CSV.read(first, DataFrame)
-		ptrf_pts, ptrf_meta_all = Matrix(C1[:,1:3]), Matrix(C1[:,4:end])
-		C2 = CSV.read(second, DataFrame)
-		cav1_pts, cav1_meta_all = Matrix(C2[:,1:3]), Matrix(C2[:,4:end])
+		if endswith(first, ".ascii")
+			@info "Loading from bin"
+		    C1 = first
+		    C2 = second
+			s=pyimport("smlmvis.gsdreader")
+		    ptrf=s.GSDReader(C1, binary=false)
+		    ptrf_pts = copy(ptrf.points)
+		    ptrf_pts[:,1:2].*=gsd_nmpx
+		    cav1= s.GSDReader(C2, binary=false)
+		    cav1_pts = copy(cav1.points)
+		    cav1_pts[:,1:2].*=gsd_nmpx
+			ptrf_meta=ptrf.values
+			cav1_meta=cav1.values
+		else
+			@info "Loading from CSV"
+			C1 = CSV.read(first, DataFrame)
+			ptrf_pts, ptrf_meta_all = Matrix(C1[:,1:3]), Matrix(C1[:,4:end])
+			C2 = CSV.read(second, DataFrame)
+			cav1_pts, cav1_meta_all = Matrix(C2[:,1:3]), Matrix(C2[:,4:end])
+		end
 	end
 
     @info "Detecting bead ..."
@@ -291,6 +306,8 @@ function project_image(coords3d, nm_per_px; mx=nothing, remove_bead=false, log_s
             end
         end
         image[beadmask .>= 1] .= 0
+		### generate beadmask
+		### set image[beadmask to zero]
     end
     if log_scale
         @debug "Log transform of density"
