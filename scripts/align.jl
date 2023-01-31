@@ -69,7 +69,7 @@ function parse_commandline()
 			arg_type = Int64
 			default = 3
 		"--beads", "-b"
-			help = "Maximum expected nr of fiducials (default 2)"
+			help = "Maximum expected nr of fiducials (default 2) -- not fully supported yet"
 			arg_type = Int64
 			default = 2
     end
