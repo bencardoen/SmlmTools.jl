@@ -31,7 +31,9 @@ From: bcvcsert_base_f35j17.sif
     ln -s /dev/shm/ /opt/juliadepot/logs
 
     ## Cleanup
-    #dnf remove -y wget unzip
+    dnf group remove -y "Development Tools"
+    dnf remove -y wget unzip
+    dnf clean all
 
 %environment
     export LC_ALL=C
