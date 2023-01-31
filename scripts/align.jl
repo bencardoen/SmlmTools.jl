@@ -68,6 +68,10 @@ function parse_commandline()
 			help = "Windowsize used in colocalization (default = 3, should be odd >= 3)"
 			arg_type = Int64
 			default = 3
+		"--beads", "-b"
+			help = "Maximum expected nr of fiducials (default 2)"
+			arg_type = Int64
+			default = 2
     end
 
     return parse_args(s)

@@ -110,19 +110,20 @@ end
 #     end
 # end
 
-function detect_bead(coordsc1, coordsc2, nm_per_px)
+function detect_bead(coordsc1, coordsc2, nm_per_px, beads=1)
     qx = max(maximum(coordsc1), maximum(coordsc2))
     @debug "Maximum range = $qx"
-    i1, i2 = [project_image(c, nm_per_px; mx=qx, remove_bead=true, log_scale=false, σnm=10) for c in [coordsc1, coordsc2]]
+    i1, i2 = [project_image(c, nm_per_px; mx=qx, remove_bead=true, log_scale=false, σnm=10, beads=beads) for c in [coordsc1, coordsc2]]
+	r1, r2 = [project_image(c, nm_per_px; mx=qx, remove_bead=false, log_scale=false, σnm=10, beads=beads) for c in [coordsc1, coordsc2]]
     d1, d2 = i1[end], i2[end]
 	un = Int8.(d1) .+ Int8.(d2)
     if maximum(un) < 2
         @warn "No overlapping bead mask found!!"
         throw(ArgumentError("No overlapping bead found"))
-        return d1, d2, un, i1, i2
+        return d1, d2, un, i1, i2, r1, r2
     else
         @info "Overlapping bead mask found"
-        return d1, d2, un, i1, i2
+        return d1, d2, un, i1, i2, r1, r2
     end
 end
 
@@ -180,9 +181,8 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     @info "Detecting bead ..."
 	mx = max(maximum(ptrf_pts[:, 1:2]), maximum(cav1_pts[:, 1:2]))
     bd = detect_bead(ptrf_pts[:, 1:2], cav1_pts[:, 1:2], nm_per_px)
-	#debug : Case of 2 beads ?
 
-	_, _, _, i1, i2=bd
+	_, _, _, _, _, i1, i2=bd
 	Images.save(joinpath(outdir, "C1_notaligned.tif"), N0f16.(nmz(i1[2])))
 	Images.save(joinpath(outdir, "C2_notaligned.tif"), N0f16.(nmz(i2[2])))
     a, b = bd[4], bd[5]
@@ -253,8 +253,18 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 
     MX=max(maximum(aligned_ptrf[:,1:2]), maximum(cav_aligned_time_full[:,1:2]))
 	MX=max(MX, mx)
-    C1P = project_image(aligned_ptrf, nm_per_px; mx=MX, remove_bead=true, log_scale=false, σnm=σ)
-    C2P = project_image(cav_aligned_time_full, nm_per_px; mx=MX, remove_bead=true, log_scale=false, σnm=σ)
+	@debug "Fix multiple bead case"
+    C1P = project_image(aligned_ptrf, nm_per_px; mx=MX, remove_bead=false, log_scale=false, σnm=σ)
+    C2P = project_image(cav_aligned_time_full, nm_per_px; mx=MX, remove_bead=false, log_scale=false, σnm=σ)
+	@info "use beadmask"
+
+	# im1 = C1P[2]
+	# im2 = C2P[2]
+	# im1[minx:maxx, miny:maxy] .= 0
+	# im2[minx:maxx, miny:maxy] .= 0
+    # (minx, miny), (maxx, maxy) = beadcoords(bd[3])
+
+
 
     c1f = joinpath(outdir, "C1.tif")
     c2f = joinpath(outdir, "C2.tif")
@@ -320,8 +330,14 @@ function project_image(coords3d, nm_per_px; mx=nothing, remove_bead=false, log_s
     end
     σ= σnm/nm_per_px
     @debug "Gaussian σ $(σnm) → $(σ) px"
-    qz=quantile(logz.(image[image .> 0])[:], 0.95)
-    image[logz.(image) .>= qz] .= exp(qz)
+	if length(logz.(image[image .> 0])[:]) != 0
+	    qz=quantile(logz.(image[image .> 0])[:], 0.95)
+	    image[logz.(image) .>= qz] .= exp(qz)
+	else
+		@warn "Image empty without beads ... --> bead detection too aggresive?"
+	end
+    # qz=quantile(logz.(image[image .> 0])[:], 0.95)
+    # image[logz.(image) .>= qz] .= exp(qz)
     smooth =  ImageFiltering.imfilter(image, ImageFiltering.Kernel.gaussian((σ, σ)))
     return image, smooth, dense, beadmask
 end
