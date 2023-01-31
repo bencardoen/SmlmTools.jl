@@ -48,3 +48,7 @@ export SINGULARITY_BINDPATH="/scratch/$USER,$SLURM_TMPDIR"
 ./SmlmTools.sif -f testdata/1C8PTRF_3_1_Cav_647.bin -s testdata/1C8PTRF_3_1_PTRF_568.bin -t GSD -p 10 -a -n 10 --outdir . -c
 ```
 This will produce colocalization for 7 metrics, 2D image projections and 3D alignment.
+
+
+#### See also
+- [Colocalization](https://github.com/bencardoen/Colocalization.jl)
