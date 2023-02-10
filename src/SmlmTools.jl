@@ -143,7 +143,7 @@ end
 """
 function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=20000, interval=4000)
 	if endswith(first, ".bin")
-		@info "Loading from bin"
+		@debug "Loading from bin"
 	    C1 = first
 	    C2 = second
 		s=pyimport("smlmvis.gsdreader")
@@ -157,7 +157,7 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 		cav1_meta_all=cav1.values
 	else
 		if endswith(first, ".ascii")
-			@info "Loading from bin"
+			@debug "Loading from bin"
 		    C1 = first
 		    C2 = second
 			s=pyimport("smlmvis.gsdreader")
@@ -217,12 +217,12 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     q=Plots.scatter(offset_cav[:,1], markershape=:cross, offset_cav[:,2], alpha=.5, markersize=5,label="C2", color=:reds, marker_z=range(1, size(offset_cav, 1)))
     Plots.scatter!(offset_ptrf[:,1], offset_ptrf[:,2], markershape=:xcross, alpha=.5, dpi=150, markersize=5, label="C1", color=:blues, marker_z=range(1, size(offset_ptrf, 1)), xlabel="Fiducial trajectory over time (X, nm)", ylabel="Fiducial trajectory over time (Y, nm)")
     Plots.savefig(joinpath(outdir, "bead_trajectory.svg"))
-    @info "Saving trajectory plot to $(joinpath(outdir, "bead_trajectory.svg"))"
+    @debug "Saving trajectory plot to $(joinpath(outdir, "bead_trajectory.svg"))"
 
     ### Compute the translation between T=1 for each channel
     offset_translate = sms_p[1, :] .- sms_c[1, :]
 
-    @info "Offset between channels at time 0 $(offset_translate)"
+    @debug "Offset between channels at time 0 $(offset_translate)"
     ### Aligned the locations using the timed offset
     ptrf_aligned_timed = vcat(align_using_time_mean(ptrf_fiducial, offset_ptrf, ptrf_meta)...)
     cav_aligned_timed = vcat(align_using_time_mean(cav1_fiducial, offset_cav, cav1_meta)...)
@@ -231,14 +231,14 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     pc[:, 1] .-= offset_translate[1]
     pc[:, 2] .-= offset_translate[2]
 
-    @info "Plotting aligned fiducials"
+    @debug "Plotting aligned fiducials"
     q=Plots.scatter(pc[:,1], pc[:,2] , alpha=.25, markersize=2, color=:blue, label="C1 fiducial aligned")
     Plots.scatter!(cav_aligned_timed[:,1], cav_aligned_timed[:,2] , alpha=.25, markersize=2, color=:red, label="C2 fiducial aligned")
     q=Plots.plot(q, dpi=300, size=(800, 600), xlabel="X axis nm", ylabel="Y axis nm", title="Bead location in XY after alignment")
-    @info "Saving fiducal XY plot in: $(joinpath(outdir, "bead_aligned.svg"))"
+    @debug "Saving fiducal XY plot in: $(joinpath(outdir, "bead_aligned.svg"))"
     Plots.savefig(joinpath(outdir, "bead_aligned.svg"))
 
-    @info "Aligning full channels"
+    @debug "Aligning full channels"
     ptrf_aligned_time_full = vcat(align_using_time_mean(ptrf_pts, offset_ptrf, ptrf_meta_all)...)
     cav_aligned_time_full = vcat(align_using_time_mean(cav1_pts, offset_cav, cav1_meta_all)...)
     aligned_ptrf = copy(ptrf_aligned_time_full)
@@ -248,7 +248,7 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 
     Plots.scatter(aligned_ptrf[:, 1], aligned_ptrf[:, 2], alpha=.125, markersize=2, color=:red, label="C1 aligned")
     Plots.scatter!(cav_aligned_time_full[:, 1], dpi=300, size=(800, 600), cav_aligned_time_full[:, 2], alpha=.125, markersize=2, color=:blue, label="C2 aligned", xlabel="X nm", ylabel="Y nm")
-    @info "Saving scatterplot of aligned channels to $(joinpath(outdir, "aligned_xy_both_channels.svg"))"
+    @debug "Saving scatterplot of aligned channels to $(joinpath(outdir, "aligned_xy_both_channels.svg"))"
     Plots.savefig(joinpath(outdir, "aligned_xy_both_channels.svg"))
 
     MX=max(maximum(aligned_ptrf[:,1:2]), maximum(cav_aligned_time_full[:,1:2]))
@@ -256,7 +256,7 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 	@debug "Fix multiple bead case"
     C1P = project_image(aligned_ptrf, nm_per_px; mx=MX, remove_bead=false, log_scale=false, σnm=σ)
     C2P = project_image(cav_aligned_time_full, nm_per_px; mx=MX, remove_bead=false, log_scale=false, σnm=σ)
-	@info "use beadmask"
+	@debug "use beadmask"
 
 	# im1 = C1P[2]
 	# im2 = C2P[2]
@@ -268,16 +268,16 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 
     c1f = joinpath(outdir, "C1.tif")
     c2f = joinpath(outdir, "C2.tif")
-    @info "Saving projection 2D images to $(c1f) and $(c2f)"
+    @debug "Saving projection 2D images to $(c1f) and $(c2f)"
     Images.save(c1f, N0f16.(nmz(C1P[2])))
     Images.save(c2f, N0f16.(nmz(C2P[2])))
     # c2=SPECHT.tcolors([N0f16.(nmz(C1P[2])), N0f16.(nmz(C2P[2]))])
     # ImageView.imshow()
-	@info "Saving points to CSV"
+	@debug "Saving points to CSV"
 	CSV.write(joinpath(outdir, "aligned_c1.csv"), DataFrame(xnm=pc[:,1], ynm=pc[:,2], znm=pc[:,3]))
 	qc = copy(cav_aligned_time_full)
 	CSV.write(joinpath(outdir, "aligned_c2.csv"), DataFrame(xnm=qc[:,1], ynm=qc[:,2], znm=qc[:,3]))
-    @info "Done"
+    @debug "Done"
 	# @error "Save vtu"
 	return aligned_ptrf, cav_aligned_time_full, C1P, C2P, bd
 end
