@@ -7,6 +7,8 @@ A set of tools for processing point cloud based superresolution/single molecule 
 
 Code Coverage [![codecov](https://codecov.io/gh/bencardoen/SmlmTools.jl/branch/master/graph/badge.svg?token=qFQ3PGsBBY)](https://codecov.io/gh/bencardoen/SmlmTools.jl)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7632321.svg)](https://doi.org/10.5281/zenodo.7632321)
+
 Automated testing [![CircleCI](https://dl.circleci.com/status-badge/img/gh/bencardoen/SmlmTools.jl/tree/master.svg?style=svg&circle-token=51454c475b36421e7f42be42ebcf3dea1b77c483)](https://dl.circleci.com/status-badge/redirect/gh/bencardoen/SmlmTools.jl/tree/master)
 
 ## Installation
@@ -49,6 +51,24 @@ export SINGULARITY_BINDPATH="/scratch/$USER,$SLURM_TMPDIR"
 ```
 This will produce colocalization for 7 metrics, 2D image projections and 3D alignment.
 
+
+#### Cite
+If you find this useful, consider citing
+```bibtext
+@software{cardoen_ben_2023_7632321,
+  author       = {Cardoen, Ben},
+  title        = {{SmlmTools: A Julia package for computational 
+                   methods for single molecule localization /
+                   superresolution microscopy}},
+  month        = feb,
+  year         = 2023,
+  note         = {https://github.com/bencardoen/SmlmTools.jl},
+  publisher    = {Zenodo},
+  version      = {0.1},
+  doi          = {10.5281/zenodo.7632321},
+  url          = {https://doi.org/10.5281/zenodo.7632321}
+}
+```
 
 #### See also
 - [Colocalization](https://github.com/bencardoen/Colocalization.jl)
