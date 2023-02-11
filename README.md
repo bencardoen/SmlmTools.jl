@@ -39,14 +39,22 @@ image, smoothed, density,  beadmask = project_image(coords3d, nm_per_px; mx=noth
 ### Using on cluster
 - Log in
 #### Get resources
+This example runs on Compute Canada
 ```bash
+# Change to local scratch directory
 cd scratch
+# Copy the singularity image
 cp /project/rrg-hamarneh/data/nabi-robert-ivan/software/smlmtools/SmlmTools.sif .
+# Set executable
+chmod u+x SmlmToools.sif
+# Request resources to run from SLURM
 salloc --mem=32GB --account=rrg-hamarneh --cpus-per-task=4 --time=3:00:00
 ```
 #### Run
 ```bash
+# Make sure Singularity has rw access
 export SINGULARITY_BINDPATH="/scratch/$USER,$SLURM_TMPDIR"
+# Execute
 ./SmlmTools.sif -f testdata/1C8PTRF_3_1_Cav_647.bin -s testdata/1C8PTRF_3_1_PTRF_568.bin -t GSD -p 10 -a -n 10 --outdir . -c
 ```
 This will produce colocalization for 7 metrics, 2D image projections and 3D alignment.
