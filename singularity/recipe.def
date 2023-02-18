@@ -5,8 +5,8 @@ From: bcvcsert_base_f35j17.sif
     SmlmTools.jl.zip /opt/SmlmTools.jl.zip
 
 %post
-    export JLMJV=1.7
-    export JLV=$JLMJV.1
+    export JLMJV=1.8
+    export JLV=$JLMJV.5
     export PYTHON=`which python3`
     export JULIA_TGZ=julia-$JLV-linux-x86_64.tar.gz
     export PATH=/opt/julia/julia-$JLV/bin:$PATH
@@ -44,9 +44,9 @@ From: bcvcsert_base_f35j17.sif
 %environment
     export LC_ALL=C
     export LOCALPKG=/opt/SmlmTools.jl
-    export JLMJV=1.7
+    export JLMJV=1.8
     export PYTHON="/usr/bin/python3"
-    export JLV=$JLMJV.1
+    export JLV=$JLMJV.5
     export PATH=/opt/julia/julia-$JLV/bin:$PATH
     export JULIA_DEPOT_PATH=/opt/juliadepot
 
