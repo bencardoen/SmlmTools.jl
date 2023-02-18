@@ -28,7 +28,10 @@ using Logging;
 install_p = false
 if !haskey(ENV, "PYTHON")
     install_p = true
+    @info "Python ENV not set --> setting to empty"
     ENV["PYTHON"] = ""
+else
+    @info "Python set to $(ENV["PYTHON"])"
 end
 # ENV["R_HOME"] = "*"
 # ENV["LD_PRELOAD"] = joinpath(ENV["HOME"], ".julia/conda/3/lib/libstdc++.so.6.0.30")
@@ -48,8 +51,9 @@ using Conda
 # Pin this version, to avoid clashes with libgcc.34
 # Conda.add("scipy=1.8.0"))
 try
+    @info "Importing smlmvis"
     PyCall.pyimport("smlmvis");
-    PyCall.pyimport("meshio");
+    @info "Success"
 catch e
     @warn "Failed import $e -- installing"
     println("Failed import $e -- installing")
