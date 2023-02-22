@@ -141,8 +141,12 @@ end
 
 	First, second are eiter GSD superres format or CSV, in the 2nd case the first 3 columns should be X, Y, Z in nm, and time as 5th column.
 """
-function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=20000, interval=4000)
-	if endswith(first, ".bin")
+function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=20000, interval=4000, type="gsd")
+	fext = split(first, ".")[end]
+    if ! (fext in ["ascii", "bin", "csv"])
+        @error "Unsupported files : should be CSV or GSD bin/ascii"
+    end
+    if fext == "bin" 
 		@debug "Loading from bin"
 	    C1 = first
 	    C2 = second
@@ -156,8 +160,8 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 		ptrf_meta_all=ptrf.values
 		cav1_meta_all=cav1.values
 	else
-		if endswith(first, ".ascii")
-			@debug "Loading from bin"
+        if fext == "ascii"
+			@debug "Loading from gsd ascii"
 		    C1 = first
 		    C2 = second
 			s=pyimport("smlmvis.gsdreader")
@@ -170,11 +174,26 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 			ptrf_meta_all=ptrf.values
 			cav1_meta_all=cav1.values
 		else
-			@info "Loading from CSV"
-			C1 = CSV.read(first, DataFrame)
-			ptrf_pts, ptrf_meta_all = Matrix(C1[:,1:3]), Matrix(C1[:,4:end])
-			C2 = CSV.read(second, DataFrame)
-			cav1_pts, cav1_meta_all = Matrix(C2[:,1:3]), Matrix(C2[:,4:end])
+            if (fext == "csv") && (type != "thunderstorm")
+                @info "Loading from generic CSV"
+                C1 = CSV.read(first, DataFrame)
+                ptrf_pts, ptrf_meta_all = Matrix(C1[:,1:3]), Matrix(C1[:,4:end])
+                C2 = CSV.read(second, DataFrame)
+                cav1_pts, cav1_meta_all = Matrix(C2[:,1:3]), Matrix(C2[:,4:end])
+            else
+                @info "Loading from thunderstorm CSV"
+                if !(fext == "csv") && (type == "thunderstorm")
+                    @error "Not a supported type $first $second"
+                    raise(ArgumentError("not a supported type"))
+                end
+                @info "2D Thunderstorm"
+                C1 = CSV.read(first, DataFrame)
+                ptrf_pts, ptrf_meta_all = Matrix(C1[:,["x [nm]", "y [nm]"]]), Matrix(C1[:,["id", "frame"]])
+                ptrf_pts=hcat(ptrf_pts, zeros(size(ptrf_pts,1)))                
+                C2 = CSV.read(second, DataFrame)
+                cav1_pts, cav1_meta_all = Matrix(C2[:,["x [nm]", "y [nm]"]]), Matrix(C2[:,["id", "frame"]])
+                cav1_pts=hcat(cav1_pts, zeros(size(cav1_pts,1)))
+            end
 		end
 	end
 
