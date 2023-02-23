@@ -25,6 +25,7 @@ using ImageFiltering
 using ImageMorphology
 # using SPECHT
 using Printf
+using Match
 using HypothesisTests
 using PyCall
 using LaTeXStrings
@@ -132,6 +133,39 @@ function nmz(xs)
     return xs ./ maximum(xs)
 end
 
+function readfile(filename, args)
+    fext = split(filename, ".")[end]
+    @match fext begin
+        "bin" => readgsd(filename, args)
+        "ascii" => readgsd(filename, args, false)
+        "csv" => readcsv(filename, args)
+        _ => throw(ArgumentError("Unknown file type $fext"))
+    end
+end
+
+function readgsd(filename, args, binary=true)
+    @debug "Reading binary GSD format with $filename $args"
+    s=pyimport("smlmvis.gsdreader")
+    r=s.GSDReader(filename, binary=binary)
+    pts = copy(r.points)
+    pts[:,1:2] .*= args["gsd_nmpx"]    
+    meta=copy(r.values)
+    return pts, meta
+end
+
+function readcsv(filename, args)
+    @debug "Reading CSV data"
+    C1 = CSV.read(filename, DataFrame)
+    if args["type"] != "thunderstorm"
+        @debug "Reading generic CSV with x,y,z,id,frame"
+        return Matrix(C1[:,1:3]), Matrix(C1[:,4:end])
+    else
+        @debug "Reading Thunderstorm CSV with x [nm], y [nm], id, frame"
+        pts, meta = Matrix(C1[:,["x [nm]", "y [nm]"]]), Matrix(C1[:,["id", "frame"]])
+        pts=hcat(pts, zeros(size(pts,1)))
+        return pts, meta       
+    end
+end
 """
 	align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=20000, interval=4000)
 
@@ -140,62 +174,69 @@ end
 	Saves plots of the correction, 2D projected images, as well as CSV files of the correct 3D point clouds.
 
 	First, second are eiter GSD superres format or CSV, in the 2nd case the first 3 columns should be X, Y, Z in nm, and time as 5th column.
+    If `type` is set to `thunderstorm`, will read columns `x [nm]` and `y [nm]` as well as `frame` and `id`. 
+    In this case a zero 3rd dimension is used.
 """
 function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=20000, interval=4000, type="gsd")
 	fext = split(first, ".")[end]
     if ! (fext in ["ascii", "bin", "csv"])
         @error "Unsupported files : should be CSV or GSD bin/ascii"
     end
-    if fext == "bin" 
-		@debug "Loading from bin"
-	    C1 = first
-	    C2 = second
-		s=pyimport("smlmvis.gsdreader")
-	    ptrf=s.GSDReader(C1)
-	    ptrf_pts = copy(ptrf.points)
-	    ptrf_pts[:,1:2].*=gsd_nmpx
-	    cav1= s.GSDReader(C2)
-	    cav1_pts = copy(cav1.points)
-	    cav1_pts[:,1:2].*=gsd_nmpx
-		ptrf_meta_all=ptrf.values
-		cav1_meta_all=cav1.values
-	else
-        if fext == "ascii"
-			@debug "Loading from gsd ascii"
-		    C1 = first
-		    C2 = second
-			s=pyimport("smlmvis.gsdreader")
-		    ptrf=s.GSDReader(C1, binary=false)
-		    ptrf_pts = copy(ptrf.points)
-		    ptrf_pts[:,1:2].*=gsd_nmpx
-		    cav1= s.GSDReader(C2, binary=false)
-		    cav1_pts = copy(cav1.points)
-		    cav1_pts[:,1:2].*=gsd_nmpx
-			ptrf_meta_all=ptrf.values
-			cav1_meta_all=cav1.values
-		else
-            if (fext == "csv") && (type != "thunderstorm")
-                @info "Loading from generic CSV"
-                C1 = CSV.read(first, DataFrame)
-                ptrf_pts, ptrf_meta_all = Matrix(C1[:,1:3]), Matrix(C1[:,4:end])
-                C2 = CSV.read(second, DataFrame)
-                cav1_pts, cav1_meta_all = Matrix(C2[:,1:3]), Matrix(C2[:,4:end])
-            else
-                @info "Loading from thunderstorm CSV"
-                if !(fext == "csv") && (type == "thunderstorm")
-                    @error "Not a supported type $first $second"
-                    raise(ArgumentError("not a supported type"))
-                end
-                @info "2D Thunderstorm"
-                C1 = CSV.read(first, DataFrame)
-                ptrf_pts, ptrf_meta_all = Matrix(C1[:,["x [nm]", "y [nm]"]]), Matrix(C1[:,["id", "frame"]])
-                ptrf_pts=hcat(ptrf_pts, zeros(size(ptrf_pts,1)))                
-                C2 = CSV.read(second, DataFrame)
-                cav1_pts, cav1_meta_all = Matrix(C2[:,["x [nm]", "y [nm]"]]), Matrix(C2[:,["id", "frame"]])
-                cav1_pts=hcat(cav1_pts, zeros(size(cav1_pts,1)))
-            end
-		end
-	end
+    args = Dict("gsd_nmpx"=>gsd_nmpx, "type"=>type)
+    ptrf_pts, ptrf_meta_all = readfile(first, args)
+    cav1_pts, cav1_meta_all = readfile(second, args)
+    # if fext == "bin" 
+	# 	@debug "Loading from bin"
+    #     ptrf_pts, ptrf_meta_all = readfile(first, Dict("gsd_nmpx"=>gsd_nmpx))
+    #     cav1_pts, cav1_meta_all = readfile(second, Dict("gsd_nmpx"=>gsd_nmpx))
+	#     # C1 = first
+	#     # C2 = second
+	# 	# s=pyimport("smlmvis.gsdreader")
+	#     # ptrf=s.GSDReader(C1)
+	#     # ptrf_pts = copy(ptrf.points)
+	#     # ptrf_pts[:,1:2].*=gsd_nmpx
+	#     # cav1= s.GSDReader(C2)
+	#     # cav1_pts = copy(cav1.points)
+	#     # cav1_pts[:,1:2].*=gsd_nmpx
+	# 	# ptrf_meta_all=ptrf.values
+	# 	# cav1_meta_all=cav1.values
+	# else
+    #     if fext == "ascii"
+	# 		@debug "Loading from gsd ascii"
+	# 	    C1 = first
+	# 	    C2 = second
+	# 		s=pyimport("smlmvis.gsdreader")
+	# 	    ptrf=s.GSDReader(C1, binary=false)
+	# 	    ptrf_pts = copy(ptrf.points)
+	# 	    ptrf_pts[:,1:2].*=gsd_nmpx
+	# 	    cav1= s.GSDReader(C2, binary=false)
+	# 	    cav1_pts = copy(cav1.points)
+	# 	    cav1_pts[:,1:2].*=gsd_nmpx
+	# 		ptrf_meta_all=ptrf.values
+	# 		cav1_meta_all=cav1.values
+	# 	else
+    #         if (fext == "csv") && (type != "thunderstorm")
+    #             @info "Loading from generic CSV"
+    #             C1 = CSV.read(first, DataFrame)
+    #             ptrf_pts, ptrf_meta_all = Matrix(C1[:,1:3]), Matrix(C1[:,4:end])
+    #             C2 = CSV.read(second, DataFrame)
+    #             cav1_pts, cav1_meta_all = Matrix(C2[:,1:3]), Matrix(C2[:,4:end])
+    #         else
+    #             @info "Loading from thunderstorm CSV"
+    #             if !(fext == "csv") && (type == "thunderstorm")
+    #                 @error "Not a supported type $first $second"
+    #                 raise(ArgumentError("not a supported type"))
+    #             end
+    #             @info "2D Thunderstorm"
+    #             C1 = CSV.read(first, DataFrame)
+    #             ptrf_pts, ptrf_meta_all = Matrix(C1[:,["x [nm]", "y [nm]"]]), Matrix(C1[:,["id", "frame"]])
+    #             ptrf_pts=hcat(ptrf_pts, zeros(size(ptrf_pts,1)))                
+    #             C2 = CSV.read(second, DataFrame)
+    #             cav1_pts, cav1_meta_all = Matrix(C2[:,["x [nm]", "y [nm]"]]), Matrix(C2[:,["id", "frame"]])
+    #             cav1_pts=hcat(cav1_pts, zeros(size(cav1_pts,1)))
+    #         end
+	# 	end
+	# end
 
     @info "Detecting bead ..."
 	mx = max(maximum(ptrf_pts[:, 1:2]), maximum(cav1_pts[:, 1:2]))
