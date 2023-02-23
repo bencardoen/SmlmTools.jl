@@ -45,7 +45,7 @@ using Plots
 
 # keys = ["x", "y", "z", "dx", "dy", "dz", "amplitude", "frame_number"]
 export parseSRFile, onlineVariance, estimateError, getValues, getTimes, getMagnitude, freqCount, nmz, sample_mean, detect_bead, logz,
-project_image, adjust_to_first, align_using_time_mean, roi_pts, findbeads, track_sample_mean, beadcoords, summarize_colocalization, align, nmz
+project_image, adjust_to_first, align_using_time_mean, readfile, roi_pts, findbeads, track_sample_mean, beadcoords, summarize_colocalization, align, nmz
 
 
 function sample_mean(xs; reps=100, seed=0)
@@ -177,7 +177,7 @@ end
     If `type` is set to `thunderstorm`, will read columns `x [nm]` and `y [nm]` as well as `frame` and `id`. 
     In this case a zero 3rd dimension is used.
 """
-function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=20000, interval=4000, type="gsd")
+function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=20000, interval=4000, type="gsd"; maxbeaddistancenm=300)
 	fext = split(first, ".")[end]
     if ! (fext in ["ascii", "bin", "csv"])
         @error "Unsupported files : should be CSV or GSD bin/ascii"
@@ -185,59 +185,6 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     args = Dict("gsd_nmpx"=>gsd_nmpx, "type"=>type)
     ptrf_pts, ptrf_meta_all = readfile(first, args)
     cav1_pts, cav1_meta_all = readfile(second, args)
-    # if fext == "bin" 
-	# 	@debug "Loading from bin"
-    #     ptrf_pts, ptrf_meta_all = readfile(first, Dict("gsd_nmpx"=>gsd_nmpx))
-    #     cav1_pts, cav1_meta_all = readfile(second, Dict("gsd_nmpx"=>gsd_nmpx))
-	#     # C1 = first
-	#     # C2 = second
-	# 	# s=pyimport("smlmvis.gsdreader")
-	#     # ptrf=s.GSDReader(C1)
-	#     # ptrf_pts = copy(ptrf.points)
-	#     # ptrf_pts[:,1:2].*=gsd_nmpx
-	#     # cav1= s.GSDReader(C2)
-	#     # cav1_pts = copy(cav1.points)
-	#     # cav1_pts[:,1:2].*=gsd_nmpx
-	# 	# ptrf_meta_all=ptrf.values
-	# 	# cav1_meta_all=cav1.values
-	# else
-    #     if fext == "ascii"
-	# 		@debug "Loading from gsd ascii"
-	# 	    C1 = first
-	# 	    C2 = second
-	# 		s=pyimport("smlmvis.gsdreader")
-	# 	    ptrf=s.GSDReader(C1, binary=false)
-	# 	    ptrf_pts = copy(ptrf.points)
-	# 	    ptrf_pts[:,1:2].*=gsd_nmpx
-	# 	    cav1= s.GSDReader(C2, binary=false)
-	# 	    cav1_pts = copy(cav1.points)
-	# 	    cav1_pts[:,1:2].*=gsd_nmpx
-	# 		ptrf_meta_all=ptrf.values
-	# 		cav1_meta_all=cav1.values
-	# 	else
-    #         if (fext == "csv") && (type != "thunderstorm")
-    #             @info "Loading from generic CSV"
-    #             C1 = CSV.read(first, DataFrame)
-    #             ptrf_pts, ptrf_meta_all = Matrix(C1[:,1:3]), Matrix(C1[:,4:end])
-    #             C2 = CSV.read(second, DataFrame)
-    #             cav1_pts, cav1_meta_all = Matrix(C2[:,1:3]), Matrix(C2[:,4:end])
-    #         else
-    #             @info "Loading from thunderstorm CSV"
-    #             if !(fext == "csv") && (type == "thunderstorm")
-    #                 @error "Not a supported type $first $second"
-    #                 raise(ArgumentError("not a supported type"))
-    #             end
-    #             @info "2D Thunderstorm"
-    #             C1 = CSV.read(first, DataFrame)
-    #             ptrf_pts, ptrf_meta_all = Matrix(C1[:,["x [nm]", "y [nm]"]]), Matrix(C1[:,["id", "frame"]])
-    #             ptrf_pts=hcat(ptrf_pts, zeros(size(ptrf_pts,1)))                
-    #             C2 = CSV.read(second, DataFrame)
-    #             cav1_pts, cav1_meta_all = Matrix(C2[:,["x [nm]", "y [nm]"]]), Matrix(C2[:,["id", "frame"]])
-    #             cav1_pts=hcat(cav1_pts, zeros(size(cav1_pts,1)))
-    #         end
-	# 	end
-	# end
-
     @info "Detecting bead ..."
 	mx = max(maximum(ptrf_pts[:, 1:2]), maximum(cav1_pts[:, 1:2]))
     bd = detect_bead(ptrf_pts[:, 1:2], cav1_pts[:, 1:2], nm_per_px)
@@ -254,7 +201,6 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     @info "Estimated Fiducal location (nm): X $X Y $Y"
     ptrf_fiducial, ptrf_meta = roi_pts(ptrf_pts, X, Y, ptrf_meta_all)
     cav1_fiducial, cav1_meta = roi_pts(cav1_pts, X, Y, cav1_meta_all)
-
 
     q=Plots.scatter(ptrf_fiducial[:,1], ptrf_fiducial[:,2] , alpha=.25, markersize=2, color=:blue, label="C1")
     Plots.scatter!(cav1_fiducial[:,1], cav1_fiducial[:,2] , alpha=.25, markersize=2, color=:red, label="C2")
@@ -317,14 +263,6 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     C1P = project_image(aligned_ptrf, nm_per_px; mx=MX, remove_bead=false, log_scale=false, σnm=σ)
     C2P = project_image(cav_aligned_time_full, nm_per_px; mx=MX, remove_bead=false, log_scale=false, σnm=σ)
 	@debug "use beadmask"
-
-	# im1 = C1P[2]
-	# im2 = C2P[2]
-	# im1[minx:maxx, miny:maxy] .= 0
-	# im2[minx:maxx, miny:maxy] .= 0
-    # (minx, miny), (maxx, maxy) = beadcoords(bd[3])
-
-
 
     c1f = joinpath(outdir, "C1.tif")
     c2f = joinpath(outdir, "C2.tif")
