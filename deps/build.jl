@@ -33,23 +33,12 @@ if !haskey(ENV, "PYTHON")
 else
     @info "Python set to $(ENV["PYTHON"])"
 end
-# ENV["R_HOME"] = "*"
-# ENV["LD_PRELOAD"] = joinpath(ENV["HOME"], ".julia/conda/3/lib/libstdc++.so.6.0.30")
-# Conda and PyCall are dependencies, but we need to make sure they get prebuilt first.
-# We're in our own env, so explicitly adding them now does not harm.
 Pkg.add("Conda")
 Pkg.add("PyCall")
-## --> Initiates an PyConda env local to us
 Pkg.build("PyCall")
-# Precompile
 using PyCall
 using Logging
 using Conda
-## Add the two packages we need
-# Conda.pip_interop(true)
-# Conda.add("gcc=12.1.0"; channel="conda-forge")
-# Pin this version, to avoid clashes with libgcc.34
-# Conda.add("scipy=1.8.0"))
 try
     @info "Importing smlmvis"
     PyCall.pyimport("smlmvis");
