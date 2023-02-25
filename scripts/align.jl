@@ -69,9 +69,13 @@ function parse_commandline()
 			arg_type = Int64
 			default = 3
 		"--beads", "-b"
-			help = "Maximum expected nr of fiducials (default 2) -- not fully supported yet"
+			help = "Maximum expected nr of fiducials (default 2)"
 			arg_type = Int64
 			default = 2
+		"--maxdistancebeads", "-m"
+			help = "The maximum centroid to centroid distance between closest beads that is still acceptable, default 300nm"
+			arg_type = Float64
+			default = 300.0
     end
 
     return parse_args(s)
@@ -96,10 +100,11 @@ function runalign()
 	σ = parsed_args["precision"]
 	do_align =  parsed_args["align"]
 	do_coloc = parsed_args["colocalize"]
+	maxdistancebeads = parsed_args["maxdistancebeads"]
 	res = nothing
 	if do_align
 		@info "Running alignment"
-		res = align(first, second; nm_per_px=nm_per_px, outdir=outdir, σ=σ)
+		res = align(first, second; nm_per_px=nm_per_px, outdir=outdir, σ=σ, maxbeaddistancenm=maxdistancebeads, maxbeads=parsed_args["beads"])
 	end
 	if do_coloc
 		if do_align
