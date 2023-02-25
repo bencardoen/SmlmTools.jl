@@ -87,40 +87,24 @@ end
 function aszero(xs)
 	return zeros(eltype(xs), size(xs))
 end
-#
-# function detect_bead(coordsc1, coordsc2, nm_per_px)
-#     qx = max(maximum(coordsc1), maximum(coordsc2))
-#     @debug "Maximum range = $qx"
-# 	@error "FIx me"
-# 	@info "Use findbead on both, check overlap"
-#     i1, i2 = [project_image(c, nm_per_px; mx=qx, remove_bead=true, log_scale=false, σnm=10) for c in [coordsc1, coordsc2]]
-#     d1, d2 = i1[end], i2[end]
-#     un = d1 .+ d2
-#     if maximum(un) < 2
-#         @warn "No overlapping bead mask found!!"
-#         throw(ArgumentError("No overlapping bead found"))
-#         return d1, d2, un, i1, i2
-#     else
-#         @debug "Overlapping bead mask found"
-#         return d1, d2, un, i1, i2
-#     end
-# end
 
+"""
+    detect_bead(xs, ys, nm_per_px, beads=1)
+
+    Detect two closest fiducials in xs, ys, considering up to `beads`.
+
+    Returns the bead masks, the union of the masks, the projection images with bead removed and without removal, as well as the indices of the beads and their minimmum distance 
+"""
 function detect_bead(coordsc1, coordsc2, nm_per_px, beads=1)
     qx = max(maximum(coordsc1), maximum(coordsc2))
     @debug "Maximum range = $qx"
     i1, i2 = [project_image(c, nm_per_px; mx=qx, remove_bead=true, log_scale=false, σnm=10, beads=beads) for c in [coordsc1, coordsc2]]
 	r1, r2 = [project_image(c, nm_per_px; mx=qx, remove_bead=false, log_scale=false, σnm=10, beads=beads) for c in [coordsc1, coordsc2]]
     d1, d2 = i1[end], i2[end]
-	un = Int8.(d1) .+ Int8.(d2)
-    if maximum(un) < 2
-        @warn "No overlapping bead mask found!!"
-        throw(ArgumentError("No overlapping bead found"))
-        return d1, d2, un, i1, i2, r1, r2
-    else
-        @info "Overlapping bead mask found"
-        return d1, d2, un, i1, i2, r1, r2
-    end
+    p1, p2, indices, distance = minpair(d1, d2)
+    @info "Nearest pair is $(indices) with distance $(distance) px = $(distance*nm_per_px) nm"
+	un = p1 .+ p2
+    return d1, d2, un, i1, i2, r1, r2, indices, distance 
 end
 
 
@@ -225,7 +209,11 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 	mx = max(maximum(C1_pts[:, 1:2]), maximum(C2_pts[:, 1:2]))
     bd = detect_bead(C1_pts[:, 1:2], C2_pts[:, 1:2], nm_per_px)
 
-	_, _, _, _, _, i1, i2=bd
+	_, _, _, _, _, i1, i2, _, dist =bd
+    if dist > maxbeaddistancenm
+        @error "Beads are too far apart ($dist nm) !"
+        throw(ArgumentError("Beads are too far apart ($dist nm) !"))
+    end
 	Images.save(joinpath(outdir, "C1_notaligned.tif"), N0f16.(nmz(i1[2])))
 	Images.save(joinpath(outdir, "C2_notaligned.tif"), N0f16.(nmz(i2[2])))
     a, b = bd[4], bd[5]
@@ -296,18 +284,16 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 
     MX=max(maximum(aligned_ptrf[:,1:2]), maximum(cav_aligned_time_full[:,1:2]))
 	MX=max(MX, mx)
-	@debug "Fix multiple bead case"
     C1P = project_image(aligned_ptrf, nm_per_px; mx=MX, remove_bead=false, log_scale=false, σnm=σ)
     C2P = project_image(cav_aligned_time_full, nm_per_px; mx=MX, remove_bead=false, log_scale=false, σnm=σ)
-	@debug "use beadmask"
+	
 
     c1f = joinpath(outdir, "C1.tif")
     c2f = joinpath(outdir, "C2.tif")
     @debug "Saving projection 2D images to $(c1f) and $(c2f)"
     Images.save(c1f, N0f16.(nmz(C1P[2])))
     Images.save(c2f, N0f16.(nmz(C2P[2])))
-    # c2=SPECHT.tcolors([N0f16.(nmz(C1P[2])), N0f16.(nmz(C2P[2]))])
-    # ImageView.imshow()
+    
 	@debug "Saving points to CSV"
 	CSV.write(joinpath(outdir, "aligned_c1.csv"), DataFrame(xnm=pc[:,1], ynm=pc[:,2], znm=pc[:,3]))
 	qc = copy(cav_aligned_time_full)
