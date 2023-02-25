@@ -38,6 +38,18 @@ using Statistics
         @test !isdir(t)
     end
 
+    @testset "bmp" begin
+        xs = zeros(10, 10)
+        xs[2:3,2:3] .= 1
+        ys = zeros(10, 10)
+        ys[10, 10] = 1
+        ys[4:5, 4:5] .=1
+        xi, yi, ind, d = minpair(xs, ys)
+        @test ind == (1, 1)
+        @test d == sqrt(8)
+        @test sum(xi) == sum(xs)
+        @test sum(yi) <= sum(ys)
+    end
 
     @testset "sm" begin
         xs = rand(100, 3) .* 100

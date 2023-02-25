@@ -19,11 +19,8 @@ module SmlmTools
 import Base.Filesystem
 using Distributions
 using Statistics
-# using PyPlot
-using Images
 using ImageFiltering
 using ImageMorphology
-# using SPECHT
 using Printf
 using Match
 using HypothesisTests
@@ -32,10 +29,8 @@ using LaTeXStrings
 using Images, DataFrames, CSV, LinearAlgebra
 import Glob
 using Logging
-import ImageFiltering
 import Random
 using ProgressMeter
-using Dates
 using LoggingExtras
 using Dates
 using Base.Threads
@@ -45,7 +40,7 @@ using Plots
 
 # keys = ["x", "y", "z", "dx", "dy", "dz", "amplitude", "frame_number"]
 export parseSRFile, onlineVariance, estimateError, getValues, getTimes, getMagnitude, freqCount, nmz, sample_mean, detect_bead, logz,
-project_image, adjust_to_first, align_using_time_mean, readfile, roi_pts, findbeads, track_sample_mean, beadcoords, summarize_colocalization, align, nmz
+project_image, adjust_to_first, align_using_time_mean, minpair, readfile, roi_pts, findbeads, track_sample_mean, beadcoords, summarize_colocalization, align, nmz
 
 
 function sample_mean(xs; reps=100, seed=0)
@@ -129,6 +124,47 @@ function detect_bead(coordsc1, coordsc2, nm_per_px, beads=1)
 end
 
 
+"""
+    minpair(xs, ys)
+
+For two binary masks, find the pair of components that are closest to each other.
+Return the masks of the two components, the indices of the components, and the distance between the components.
+"""
+function minpair(xs, ys)
+    if (sum(xs) < 1) || (sum(ys) < 1)
+        @warn "No fiducials in one or both channels !!!!"
+        return zeros(eltype(xs), size(xs)), zeros(eltype(ys), size(ys)), (-1, -1), Inf
+    end
+    cssx = Images.label_components(xs)
+    ctrx = Images.component_centroids(cssx)[2:end]
+    xin = Images.component_indices(cssx)[2:end]
+    cssy = Images.label_components(ys)
+    ctry = Images.component_centroids(cssy)[2:end]
+    yin = Images.component_indices(cssy)[2:end]
+    @info ctrx
+    @info ctry
+    md = Inf
+    mindices = -1, -1
+    for (i, ctr_x) in enumerate(ctrx)  
+        for (j, ctr_y) in enumerate(ctry)
+            x1, y1 = ctr_x
+            x2, y2 = ctr_y
+            d = sqrt((x1-x2)^2 + (y1-y2)^2)
+            if d < md
+                md = d
+                mindices = i, j
+            end
+        end
+    end
+    xsi = zeros(size(xs))
+    ysj = zeros(size(ys))
+    i, j = mindices
+    xsi[xin[i]] .= 1
+    ysj[yin[j]] .= 1
+    return xsi, ysj, mindices, md
+end
+
+
 function nmz(xs)
     return xs ./ maximum(xs)
 end
@@ -183,11 +219,11 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
         @error "Unsupported files : should be CSV or GSD bin/ascii"
     end
     args = Dict("gsd_nmpx"=>gsd_nmpx, "type"=>type)
-    ptrf_pts, ptrf_meta_all = readfile(first, args)
-    cav1_pts, cav1_meta_all = readfile(second, args)
+    C1_pts, C1_meta_all = readfile(first, args)
+    C2_pts, C2_meta_all = readfile(second, args)
     @info "Detecting bead ..."
-	mx = max(maximum(ptrf_pts[:, 1:2]), maximum(cav1_pts[:, 1:2]))
-    bd = detect_bead(ptrf_pts[:, 1:2], cav1_pts[:, 1:2], nm_per_px)
+	mx = max(maximum(C1_pts[:, 1:2]), maximum(C2_pts[:, 1:2]))
+    bd = detect_bead(C1_pts[:, 1:2], C2_pts[:, 1:2], nm_per_px)
 
 	_, _, _, _, _, i1, i2=bd
 	Images.save(joinpath(outdir, "C1_notaligned.tif"), N0f16.(nmz(i1[2])))
@@ -199,11 +235,11 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     Y = (miny-1)*nm_per_px, (maxy+1)*nm_per_px
 
     @info "Estimated Fiducal location (nm): X $X Y $Y"
-    ptrf_fiducial, ptrf_meta = roi_pts(ptrf_pts, X, Y, ptrf_meta_all)
-    cav1_fiducial, cav1_meta = roi_pts(cav1_pts, X, Y, cav1_meta_all)
+    C1_fiducial, C1_meta = roi_pts(C1_pts, X, Y, C1_meta_all)
+    C2_fiducial, C2_meta = roi_pts(C2_pts, X, Y, C2_meta_all)
 
-    q=Plots.scatter(ptrf_fiducial[:,1], ptrf_fiducial[:,2] , alpha=.25, markersize=2, color=:blue, label="C1")
-    Plots.scatter!(cav1_fiducial[:,1], cav1_fiducial[:,2] , alpha=.25, markersize=2, color=:red, label="C2")
+    q=Plots.scatter(C1_fiducial[:,1], C1_fiducial[:,2] , alpha=.25, markersize=2, color=:blue, label="C1")
+    Plots.scatter!(C2_fiducial[:,1], C2_fiducial[:,2] , alpha=.25, markersize=2, color=:red, label="C2")
     q=Plots.plot(q, dpi=300, size=(800, 600), xlabel="X axis nm", ylabel="Y axis nm", title="Bead location in XY")
 	_f = joinpath(outdir, "bead.svg")
     @info "Saving fiducal XY plot in: $(_f)"
@@ -211,11 +247,12 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 
     MAXFRAME=maxframe
     INTERVAL=interval
+    @debug "Change maxframe to be dynamic"
 
     @info "Computing trajectory of bead over time"
     ### Find the sampled mean location of each fiducial over time
-    sms_c, sts_c = track_sample_mean(cav1_fiducial, cav1_meta, INTERVAL, MAXFRAME)
-    sms_p, sts_p = track_sample_mean(ptrf_fiducial, ptrf_meta, INTERVAL, MAXFRAME)
+    sms_c, sts_c = track_sample_mean(C2_fiducial, C2_meta, INTERVAL, MAXFRAME)
+    sms_p, sts_p = track_sample_mean(C1_fiducial, C1_meta, INTERVAL, MAXFRAME)
     ### Compute the relative offset over time compared to t=0
     offset_cav = adjust_to_first(sms_c)
     offset_ptrf = adjust_to_first(sms_p)
@@ -230,8 +267,8 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 
     @debug "Offset between channels at time 0 $(offset_translate)"
     ### Aligned the locations using the timed offset
-    ptrf_aligned_timed = vcat(align_using_time_mean(ptrf_fiducial, offset_ptrf, ptrf_meta)...)
-    cav_aligned_timed = vcat(align_using_time_mean(cav1_fiducial, offset_cav, cav1_meta)...)
+    ptrf_aligned_timed = vcat(align_using_time_mean(C1_fiducial, offset_ptrf, C1_meta)...)
+    cav_aligned_timed = vcat(align_using_time_mean(C2_fiducial, offset_cav, C2_meta)...)
     pc = copy(ptrf_aligned_timed)
     pc[:, 3] .-= offset_translate[3]
     pc[:, 1] .-= offset_translate[1]
@@ -245,8 +282,8 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     Plots.savefig(joinpath(outdir, "bead_aligned.svg"))
 
     @debug "Aligning full channels"
-    ptrf_aligned_time_full = vcat(align_using_time_mean(ptrf_pts, offset_ptrf, ptrf_meta_all)...)
-    cav_aligned_time_full = vcat(align_using_time_mean(cav1_pts, offset_cav, cav1_meta_all)...)
+    ptrf_aligned_time_full = vcat(align_using_time_mean(C1_pts, offset_ptrf, C1_meta_all)...)
+    cav_aligned_time_full = vcat(align_using_time_mean(C2_pts, offset_cav, C2_meta_all)...)
     aligned_ptrf = copy(ptrf_aligned_time_full)
     aligned_ptrf[:,3] .-= offset_translate[3]
     aligned_ptrf[:,1] .-= offset_translate[1]
