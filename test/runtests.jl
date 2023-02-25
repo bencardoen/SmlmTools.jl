@@ -32,7 +32,7 @@ using Statistics
         # CSV.write("2p.csv", DataFrame(vs, :auto))
         first="1p.csv"
         second="2p.csv"
-        r=align(first, second; outdir=t)
+        r=align(first, second; outdir=t, type="thunderstorm")
         @test isdir(t)
         rm(t;recursive=true)
         @test !isdir(t)

@@ -199,6 +199,7 @@ end
 """
 function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=20000, interval=4000, type="gsd", maxbeaddistancenm=300, maxbeads=2)
 	fext = split(first, ".")[end]
+    @info "Loading $first and $second"
     if ! (fext in ["ascii", "bin", "csv"])
         @error "Unsupported files : should be CSV or GSD bin/ascii"
     end
@@ -253,7 +254,7 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     ### Compute the translation between T=1 for each channel
     offset_translate = sms_p[1, :] .- sms_c[1, :]
 
-    @debug "Offset between channels at time 0 $(offset_translate)"
+    @info "Offset between channels at time 0 $(offset_translate)"
     ### Aligned the locations using the timed offset
     ptrf_aligned_timed = vcat(align_using_time_mean(C1_fiducial, offset_ptrf, C1_meta)...)
     cav_aligned_timed = vcat(align_using_time_mean(C2_fiducial, offset_cav, C2_meta)...)
@@ -269,7 +270,7 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     @debug "Saving fiducal XY plot in: $(joinpath(outdir, "bead_aligned.svg"))"
     Plots.savefig(joinpath(outdir, "bead_aligned.svg"))
 
-    @debug "Aligning full channels"
+    @info "Aligning full channels"
     ptrf_aligned_time_full = vcat(align_using_time_mean(C1_pts, offset_ptrf, C1_meta_all)...)
     cav_aligned_time_full = vcat(align_using_time_mean(C2_pts, offset_cav, C2_meta_all)...)
     aligned_ptrf = copy(ptrf_aligned_time_full)
