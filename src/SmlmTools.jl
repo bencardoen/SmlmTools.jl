@@ -197,7 +197,7 @@ end
     If `type` is set to `thunderstorm`, will read columns `x [nm]` and `y [nm]` as well as `frame` and `id`. 
     In this case a zero 3rd dimension is used.
 """
-function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=20000, interval=4000, type="gsd", maxbeaddistancenm=300)
+function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=20000, interval=4000, type="gsd", maxbeaddistancenm=300, maxbeads=2)
 	fext = split(first, ".")[end]
     if ! (fext in ["ascii", "bin", "csv"])
         @error "Unsupported files : should be CSV or GSD bin/ascii"
@@ -207,7 +207,7 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     C2_pts, C2_meta_all = readfile(second, args)
     @info "Detecting bead ..."
 	mx = max(maximum(C1_pts[:, 1:2]), maximum(C2_pts[:, 1:2]))
-    bd = detect_bead(C1_pts[:, 1:2], C2_pts[:, 1:2], nm_per_px)
+    bd = detect_bead(C1_pts[:, 1:2], C2_pts[:, 1:2], nm_per_px, maxbeads)
 
 	_, _, _, _, _, i1, i2, _, dist =bd
     if dist > maxbeaddistancenm
@@ -299,8 +299,17 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 	qc = copy(cav_aligned_time_full)
 	CSV.write(joinpath(outdir, "aligned_c2.csv"), DataFrame(xnm=qc[:,1], ynm=qc[:,2], znm=qc[:,3]))
     @debug "Done"
-	# @error "Save vtu"
+    @info "Writing to VTU"
+	writetovtu(joinpath(outdir, "aligned_c1.vtu"), aligned_ptrf, aligned_ptrf[:,3:3])
+	writetovtu(joinpath(outdir, "aligned_c2.vtu"), cav_aligned_time_full, cav_aligned_time_full[:,3:3])
 	return aligned_ptrf, cav_aligned_time_full, C1P, C2P, bd
+end
+
+
+function writetovtu(fname, pts, meta)
+    @debug "Writing $(size(pts)) to $(fname)"
+    s = pyimport("smlmvis.vtuwriter")
+    s.VtuWriter("fname", pts, meta)
 end
 
 """

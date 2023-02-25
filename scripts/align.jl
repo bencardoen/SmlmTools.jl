@@ -55,7 +55,7 @@ function parse_commandline()
 		"--align", "-a"
             help = "Set to true to do alignment (default = true). Needs a SRM/SMLM type format, e.g. GSD's bin files"
             action = :store_true
-            default = true
+            default = false
 		"--nmpx", "-n"
 			help = "Each pixel is n x n nm wide, default 10"
 			arg_type = Float64
@@ -104,7 +104,7 @@ function runalign()
 	res = nothing
 	if do_align
 		@info "Running alignment"
-		res = align(first, second; nm_per_px=nm_per_px, outdir=outdir, σ=σ, maxbeaddistancenm=maxdistancebeads, maxbeads=parsed_args["beads"])
+		res = align(first, second; type=parsed_args["type"], nm_per_px=nm_per_px, outdir=outdir, σ=σ, maxbeaddistancenm=maxdistancebeads, maxbeads=parsed_args["beads"])
 	end
 	if do_coloc
 		if do_align
