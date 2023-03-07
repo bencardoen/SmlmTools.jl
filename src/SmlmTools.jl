@@ -296,11 +296,14 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     Images.save(c2f, N0f16.(nmz(C2P[2])))
     
 	@debug "Saving points to CSV"
+    pc = copy(aligned_ptrf)
+    @info "Min $(minimum(pc[:,1:2])) - Max $(maximum(pc[:,1:2])) nm"
 	CSV.write(joinpath(outdir, "aligned_c1.csv"), DataFrame(xnm=pc[:,1], ynm=pc[:,2], znm=pc[:,3]))
 	qc = copy(cav_aligned_time_full)
 	CSV.write(joinpath(outdir, "aligned_c2.csv"), DataFrame(xnm=qc[:,1], ynm=qc[:,2], znm=qc[:,3]))
     @debug "Done"
     @info "Writing to VTU"
+    @info "Using filenames $(joinpath(outdir, "aligned_c1.vtu")) and $(joinpath(outdir, "aligned_c2.vtu"))"
 	writetovtu(joinpath(outdir, "aligned_c1.vtu"), aligned_ptrf, aligned_ptrf[:,3:3])
 	writetovtu(joinpath(outdir, "aligned_c2.vtu"), cav_aligned_time_full, cav_aligned_time_full[:,3:3])
 	return aligned_ptrf, cav_aligned_time_full, C1P, C2P, bd

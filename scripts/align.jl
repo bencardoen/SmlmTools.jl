@@ -92,7 +92,6 @@ function runalign()
     for (arg,val) in parsed_args
         @info "  $arg  =>  $val"
     end
-	@info "Finished"
 	first = parsed_args["first"]
 	second = parsed_args["second"]
 	outdir = parsed_args["outdir"]
