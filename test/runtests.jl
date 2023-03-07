@@ -32,6 +32,14 @@ using Statistics
         # CSV.write("2p.csv", DataFrame(vs, :auto))
         first="1p.csv"
         second="2p.csv"
+        if !isfile(first)
+            first="test/$first"
+            @test isfile(first)
+        end
+        if !isfile(second)
+            first="test/$second"
+            @test isfile(second)
+        end
         r=align(first, second; outdir=t, type="thunderstorm")
         @test isdir(t)
         rm(t;recursive=true)
