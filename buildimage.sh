@@ -22,8 +22,10 @@ set -euo pipefail
 NOW=$(date +"%m--%d--%Y ~ %I:%M:%S")
 echo "Starting processing at $NOW"
 
-CUR="/home/bcardoen/SFUVault/repositories/$PROJECT"
+#CUR="/home/bcardoen/SFUVault/repositories/$PROJECT"
+CUR=`pwd`
 TMP=/dev/shm
+echo "Using current dir $CUR and TMP $TMP"
 cd $TMP
 git clone git@github.com:bencardoen/$PROJECT.git
 echo "Creating archive"
