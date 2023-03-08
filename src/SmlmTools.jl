@@ -311,7 +311,7 @@ end
 
 
 function writetovtu(fname, pts, meta)
-    @debug "Writing $(size(pts)) to $(fname)"
+    @info "Writing $(size(pts)) to $(fname)"
     s = pyimport("smlmvis.vtuwriter")
     s.VtuWriter(fname, pts, meta)
 end
