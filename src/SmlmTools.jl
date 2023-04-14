@@ -350,7 +350,7 @@ function project_image(coords3d, nm_per_px; mx=nothing, remove_bead=false, log_s
     @debug "Creating density map"
     npoints = 0
     for (cx, cy) in zip(C1X, C1Y)
-        if cx < 0 || cy < 0
+        if cx <= 0 || cy <= 0
             npoints += 1
             continue
         end
