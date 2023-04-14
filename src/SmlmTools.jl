@@ -312,8 +312,9 @@ end
 
 function writetovtu(fname, pts, meta)
     @info "Writing $(size(pts)) to $(fname)"
-    s = pyimport("smlmvis.vtuwriter")
-    s.VtuWriter(fname, pts, meta)
+    @warn "Todo -- replace with https://juliapackages.com/p/writevtk"
+#     s = pyimport("smlmvis.vtuwriter")
+#     s.VtuWriter(fname, pts, meta)
 end
 
 """

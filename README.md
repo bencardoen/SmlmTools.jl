@@ -20,6 +20,14 @@ Code Coverage [![codecov](https://codecov.io/gh/bencardoen/SmlmTools.jl/branch/m
 
 Automated testing [![CircleCI](https://dl.circleci.com/status-badge/img/gh/bencardoen/SmlmTools.jl/tree/master.svg?style=svg&circle-token=51454c475b36421e7f42be42ebcf3dea1b77c483)](https://dl.circleci.com/status-badge/redirect/gh/bencardoen/SmlmTools.jl/tree/master)
 
+
+
+## Table of Contents
+1 [Installation](#installation)
+2.[Algorithm](#algorithm)
+3.[Usage](#usage)
+
+<a name="installation"></a>
 ## Installation
 ```bash
 git clone https://github.com/bencardoen/SmlmTools.jl.git
@@ -31,6 +39,7 @@ or adding as a package
 julia -e 'using Pkg; Pkg.add(url="https://github.com/bencardoen/SmlmTools.jl.git")'
 ```
 
+<a name="algorithm"></a>
 ## Algorithm
 You can review the documentation of the code, but in short this is in plain English what will happen:
 - Load the dataset (3D point clouds) for both channels
@@ -47,6 +56,20 @@ You can review the documentation of the code, but in short this is in plain Engl
 
 To allow you to inspect each stage, plots are saved with before/after data and for example the temporal trajectory in XYZ of the beads.
 
+First, the bead (in point cloud) is detected and plotted. Note that it is not circular due to temporal drift, and they are not aligned across channels.
+
+![images/bead.svg](images/bead.svg)
+
+Then we plot the corrected bead 
+
+![images/bead.svg](images/bead_aligned.svg)
+
+And the trajectory the beads take over time
+
+
+![images/bead.svg](images/bead_trajectory.svg)
+
+<a name="usage"></a>
 ## Usage
 
 ### 2-channel alignment
@@ -104,6 +127,10 @@ If you find this useful, consider citing
 }
 ``` 
 
-#### See also
+### See also
 - [Colocalization](https://github.com/bencardoen/Colocalization.jl)
 - [DataCurator](https://github.com/bencardoen/DataCurator.jl) This package allows you to run the above without any code, as a part of your pre or postprocessing workflows
+
+## Troubleshooting
+- The code tries to find beads by looking at maximum emission density, because beads blink continuously. However, if you ask it to look for up to 3 beads, and there are no beads, invariably it'll pick bright parts of the cell. 
+- If beads are beyond the maximum distance (300nm center to center), the code will refuse to continue. You can override it, but be careful.
