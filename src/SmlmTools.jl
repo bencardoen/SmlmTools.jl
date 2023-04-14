@@ -347,8 +347,16 @@ function project_image(coords3d, nm_per_px; mx=nothing, remove_bead=false, log_s
     image = zeros(N, N)
     @info "Creating 2D images $N x $N pixels with $(nm_per_px) nm / px"
     @debug "Creating density map"
+    npoints = 0
     for (cx, cy) in zip(C1X, C1Y)
+        if cx < 0 || cy < 0
+            npoints += 1
+            continue
+        end
         image[Int(round(cx/nm_per_px)), Int(round(cy/nm_per_px))] += 1
+    end
+    if npoints > 0
+        @warn "You have $npoints negative coordinates!!"
     end
     dense = copy(image)
     beadmask = aszero(image)
