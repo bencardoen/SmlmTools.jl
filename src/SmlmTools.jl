@@ -494,7 +494,7 @@ end
 function beadcoords(bm)
     if maximum(bm) < 2
         @error "No valid mask"
-        throw(ArgumentError("Invalid mask"))
+        throw(ArgumentError("Invalid mask -- bead detection failed, try increasing minimum distance or number of beads"))
     end
     bmask = tomask(bm)
     ccs = Images.label_components(bmask)

@@ -40,7 +40,7 @@ using Statistics
             first="test/$second"
             @test isfile(second)
         end
-        r=align(first, second; outdir=t, type="thunderstorm")
+        r=align(first, second; outdir=t, type="thunderstorm", maxbeads=4)
         @test isdir(t)
         rm(t;recursive=true)
         @test !isdir(t)
