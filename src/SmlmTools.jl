@@ -125,8 +125,8 @@ function minpair(xs, ys)
     cssy = Images.label_components(ys)
     ctry = Images.component_centroids(cssy)[2:end]
     yin = Images.component_indices(cssy)[2:end]
-    @info ctrx
-    @info ctry
+    # @info ctrx
+    # @info ctry
     md = Inf
     mindices = -1, -1
     for (i, ctr_x) in enumerate(ctrx)  
@@ -255,7 +255,7 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     ### Compute the translation between T=1 for each channel
     offset_translate = sms_p[1, :] .- sms_c[1, :]
 
-    @info "Offset between channels at time 0 $(offset_translate)"
+    @info "Offset between channels at time 0: X/Y/Z in nm:  $(offset_translate)"
     ### Aligned the locations using the timed offset
     ptrf_aligned_timed = vcat(align_using_time_mean(C1_fiducial, offset_ptrf, C1_meta)...)
     cav_aligned_timed = vcat(align_using_time_mean(C2_fiducial, offset_cav, C2_meta)...)
@@ -313,9 +313,9 @@ end
 
 function writetovtu(fname, pts, meta)
     @info "Writing $(size(pts)) to $(fname)"
-    @warn "Todo -- replace with https://juliapackages.com/p/writevtk"
-#     s = pyimport("smlmvis.vtuwriter")
-#     s.VtuWriter(fname, pts, meta)
+    # @warn "Todo -- replace with https://juliapackages.com/p/writevtk"
+    s = pyimport("smlmvis.vtuwriter")
+    s.VtuWriter(fname, pts, meta)
 end
 
 """
