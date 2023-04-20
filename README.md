@@ -23,8 +23,11 @@ Automated testing [![CircleCI](https://dl.circleci.com/status-badge/img/gh/benca
 
 
 ## Table of Contents
+
 1 [Installation](#installation)
+
 2.[Algorithm](#algorithm)
+
 3.[Usage](#usage)
 
 <a name="installation"></a>
