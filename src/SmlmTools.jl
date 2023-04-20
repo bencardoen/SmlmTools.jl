@@ -95,13 +95,27 @@ end
 
     Returns the bead masks, the union of the masks, the projection images with bead removed and without removal, as well as the indices of the beads and their minimmum distance 
 """
-function detect_bead(coordsc1, coordsc2, nm_per_px, beads=1)
+function detect_bead(coordsc1, coordsc2, nm_per_px, beads=1; σ=10, maxdistance=500)
     qx = max(maximum(coordsc1), maximum(coordsc2))
     @debug "Maximum range = $qx"
-    i1, i2 = [project_image(c, nm_per_px; mx=qx, remove_bead=true, log_scale=false, σnm=10, beads=beads) for c in [coordsc1, coordsc2]]
-	r1, r2 = [project_image(c, nm_per_px; mx=qx, remove_bead=false, log_scale=false, σnm=10, beads=beads) for c in [coordsc1, coordsc2]]
+    i1, i2 = [project_image(c, nm_per_px; mx=qx, remove_bead=true, log_scale=false, σnm=σ, beads=beads) for c in [coordsc1, coordsc2]]
+	r1, r2 = [project_image(c, nm_per_px; mx=qx, remove_bead=false, log_scale=false, σnm=σ, beads=beads) for c in [coordsc1, coordsc2]]
     d1, d2 = i1[end], i2[end]
-    p1, p2, indices, distance = minpair(d1, d2)
+    @showprogress for i in 1:beads
+        # @info "Testing bead count $i"
+        m1i = findbeads(d1, i)
+        m2i = findbeads(d2, i)
+        p1, p2, indices, distance = minpair(m1i, m2i)
+        @info "Nearest pair is $(indices) with distance $(distance) px = $(distance*nm_per_px) nm"
+        if distance < maxdistance
+            @info "Found configuration of $i beads with 1 pair close enough"
+            un = p1 .+ p2
+            return d1, d2, un, i1, i2, r1, r2, indices, distance 
+        end
+    end
+    m1i = findbeads(d1, beads)
+    m2i = findbeads(d2, beads)
+    p1, p2, indices, distance = minpair(m1i, m2i)
     @info "Nearest pair is $(indices) with distance $(distance) px = $(distance*nm_per_px) nm"
 	un = p1 .+ p2
     return d1, d2, un, i1, i2, r1, r2, indices, distance 
@@ -209,7 +223,7 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     C2_pts, C2_meta_all = readfile(second, args)
     @info "Detecting bead ..."
 	mx = max(maximum(C1_pts[:, 1:2]), maximum(C2_pts[:, 1:2]))
-    bd = detect_bead(C1_pts[:, 1:2], C2_pts[:, 1:2], nm_per_px, maxbeads)
+    bd = detect_bead(C1_pts[:, 1:2], C2_pts[:, 1:2], nm_per_px, maxbeads, maxdistance=maxbeaddistancenm, σ=σ)
 
 	_, _, _, _, _, i1, i2, _, dist =bd
     if dist*nm_per_px > maxbeaddistancenm
