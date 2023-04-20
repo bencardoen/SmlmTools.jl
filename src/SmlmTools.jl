@@ -200,6 +200,7 @@ end
 function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=20000, interval=4000, type="gsd", maxbeaddistancenm=300, maxbeads=2)
 	fext = split(first, ".")[end]
     @info "Loading $first and $second"
+    @info "Using $nm_per_px nm per pixel, max bead distance nm=$maxbeaddistancenm nm, max beads=$maxbeads"
     if ! (fext in ["ascii", "bin", "csv"])
         @error "Unsupported files : should be CSV or GSD bin/ascii"
     end
@@ -211,8 +212,8 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     bd = detect_bead(C1_pts[:, 1:2], C2_pts[:, 1:2], nm_per_px, maxbeads)
 
 	_, _, _, _, _, i1, i2, _, dist =bd
-    if dist > maxbeaddistancenm
-        @error "Beads are too far apart ($dist nm) !"
+    if dist*nm_per_px > maxbeaddistancenm
+        @error "Nearest Beads in both channels are too far apart ($dist nm > $(maxbeaddistancenm)) !"
         throw(ArgumentError("Beads are too far apart ($dist nm) !"))
     end
 	Images.save(joinpath(outdir, "C1_notaligned.tif"), N0f16.(nmz(i1[2])))
