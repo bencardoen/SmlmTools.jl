@@ -48,8 +48,9 @@ You can review the documentation of the code, but in short this is in plain Engl
 - Load the dataset (3D point clouds) for both channels
 - Find up to k fiducials (default 2) per channel
   - Use the fact that fiducials in SMLM continuously emit, so find peaks in the spatial density distribution (those would show up as 'bright points')
-- Pair the fiducials across channels
-- If the distance between the closest pair is > than a threshold (default 400nm), refuse to continue. You can increase this, but be careful, you could be aligning a fiducial close to a bright part to the cell if you do : k = 5, distance = 1000nm, and there are only 2 fiducials.
+  - Pair the fiducials across channels
+  - If the distance between the closest pair is > than a threshold (default 400nm), increase nr of fiducials
+    - If distance < threshold, pick this pair (brightest nearest pair)
 - For each channel
   - Look at the mean location of the fiducial over time
   - Use this offset over time to correct all points in this channel
