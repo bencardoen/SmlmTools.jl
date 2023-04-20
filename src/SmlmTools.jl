@@ -214,7 +214,7 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 	_, _, _, _, _, i1, i2, _, dist =bd
     if dist*nm_per_px > maxbeaddistancenm
         @error "Nearest Beads in both channels are too far apart ($dist nm > $(maxbeaddistancenm)) !"
-        throw(ArgumentError("Beads are too far apart ($dist nm) !"))
+        throw(ArgumentError("Beads are too far apart ($(dist*nm_per_px) nm > $(maxbeaddistancenm)) !"))
     end
 	Images.save(joinpath(outdir, "C1_notaligned.tif"), N0f16.(nmz(i1[2])))
 	Images.save(joinpath(outdir, "C2_notaligned.tif"), N0f16.(nmz(i2[2])))
