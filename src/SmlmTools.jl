@@ -109,7 +109,8 @@ function detect_bead(coordsc1, coordsc2, nm_per_px, beads=1; σ=10, maxdistance=
         @info "Nearest pair is $(indices) with distance $(distance) px = $(distance*nm_per_px) nm"
         if distance*nm_per_px < maxdistance
             @info "Found configuration of $i beads with 1 pair close enough"
-            un = p1 .+ p2
+            # @warn "Removeme"
+            un = dilate(dilate(p1)) .+ dilate(dilate(p2))
             return d1, d2, un, i1, i2, r1, r2, indices, distance 
         end
     end
