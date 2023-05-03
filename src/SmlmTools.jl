@@ -34,7 +34,7 @@ using ProgressMeter
 using LoggingExtras
 using Dates
 using Base.Threads
-using Plots
+# using Plots
 # @pyimport scipy
 # @pyimport scipy.stats as st
 
@@ -243,12 +243,12 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     C1_fiducial, C1_meta = roi_pts(C1_pts, X, Y, C1_meta_all)
     C2_fiducial, C2_meta = roi_pts(C2_pts, X, Y, C2_meta_all)
 
-    q=Plots.scatter(C1_fiducial[:,1], C1_fiducial[:,2] , alpha=.25, markersize=2, color=:blue, label="C1")
-    Plots.scatter!(C2_fiducial[:,1], C2_fiducial[:,2] , alpha=.25, markersize=2, color=:red, label="C2")
-    q=Plots.plot(q, dpi=300, size=(800, 600), xlabel="X axis nm", ylabel="Y axis nm", title="Bead location in XY")
-	_f = joinpath(outdir, "bead.svg")
-    @info "Saving fiducal XY plot in: $(_f)"
-    Plots.savefig(_f)
+    # q=Plots.scatter(C1_fiducial[:,1], C1_fiducial[:,2] , alpha=.25, markersize=2, color=:blue, label="C1")
+    # Plots.scatter!(C2_fiducial[:,1], C2_fiducial[:,2] , alpha=.25, markersize=2, color=:red, label="C2")
+    # q=Plots.plot(q, dpi=300, size=(800, 600), xlabel="X axis nm", ylabel="Y axis nm", title="Bead location in XY")
+	# _f = joinpath(outdir, "bead.svg")
+    # @info "Saving fiducal XY plot in: $(_f)"
+    # Plots.savefig(_f)
 
     MAXFRAME=maxframe
     INTERVAL=interval
@@ -262,10 +262,10 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     offset_cav = adjust_to_first(sms_c)
     offset_ptrf = adjust_to_first(sms_p)
     #
-    q=Plots.scatter(offset_cav[:,1], markershape=:cross, offset_cav[:,2], alpha=.5, markersize=5,label="C2", color=:reds, marker_z=range(1, size(offset_cav, 1)))
-    Plots.scatter!(offset_ptrf[:,1], offset_ptrf[:,2], markershape=:xcross, alpha=.5, dpi=150, markersize=5, label="C1", color=:blues, marker_z=range(1, size(offset_ptrf, 1)), xlabel="Fiducial trajectory over time (X, nm)", ylabel="Fiducial trajectory over time (Y, nm)")
-    Plots.savefig(joinpath(outdir, "bead_trajectory.svg"))
-    @debug "Saving trajectory plot to $(joinpath(outdir, "bead_trajectory.svg"))"
+    # q=Plots.scatter(offset_cav[:,1], markershape=:cross, offset_cav[:,2], alpha=.5, markersize=5,label="C2", color=:reds, marker_z=range(1, size(offset_cav, 1)))
+    # Plots.scatter!(offset_ptrf[:,1], offset_ptrf[:,2], markershape=:xcross, alpha=.5, dpi=150, markersize=5, label="C1", color=:blues, marker_z=range(1, size(offset_ptrf, 1)), xlabel="Fiducial trajectory over time (X, nm)", ylabel="Fiducial trajectory over time (Y, nm)")
+    # Plots.savefig(joinpath(outdir, "bead_trajectory.svg"))
+    # @debug "Saving trajectory plot to $(joinpath(outdir, "bead_trajectory.svg"))"
 
     ### Compute the translation between T=1 for each channel
     offset_translate = sms_p[1, :] .- sms_c[1, :]
@@ -279,12 +279,12 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     pc[:, 1] .-= offset_translate[1]
     pc[:, 2] .-= offset_translate[2]
 
-    @debug "Plotting aligned fiducials"
-    q=Plots.scatter(pc[:,1], pc[:,2] , alpha=.25, markersize=2, color=:blue, label="C1 fiducial aligned")
-    Plots.scatter!(cav_aligned_timed[:,1], cav_aligned_timed[:,2] , alpha=.25, markersize=2, color=:red, label="C2 fiducial aligned")
-    q=Plots.plot(q, dpi=300, size=(800, 600), xlabel="X axis nm", ylabel="Y axis nm", title="Bead location in XY after alignment")
-    @debug "Saving fiducal XY plot in: $(joinpath(outdir, "bead_aligned.svg"))"
-    Plots.savefig(joinpath(outdir, "bead_aligned.svg"))
+    # @debug "Plotting aligned fiducials"
+    # q=Plots.scatter(pc[:,1], pc[:,2] , alpha=.25, markersize=2, color=:blue, label="C1 fiducial aligned")
+    # Plots.scatter!(cav_aligned_timed[:,1], cav_aligned_timed[:,2] , alpha=.25, markersize=2, color=:red, label="C2 fiducial aligned")
+    # q=Plots.plot(q, dpi=300, size=(800, 600), xlabel="X axis nm", ylabel="Y axis nm", title="Bead location in XY after alignment")
+    # @debug "Saving fiducal XY plot in: $(joinpath(outdir, "bead_aligned.svg"))"
+    # Plots.savefig(joinpath(outdir, "bead_aligned.svg"))
 
     @info "Aligning full channels"
     ptrf_aligned_time_full = vcat(align_using_time_mean(C1_pts, offset_ptrf, C1_meta_all)...)
@@ -294,10 +294,10 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     aligned_ptrf[:,1] .-= offset_translate[1]
     aligned_ptrf[:,2] .-= offset_translate[2]
 
-    Plots.scatter(aligned_ptrf[:, 1], aligned_ptrf[:, 2], alpha=.125, markersize=2, color=:red, label="C1 aligned")
-    Plots.scatter!(cav_aligned_time_full[:, 1], dpi=300, size=(800, 600), cav_aligned_time_full[:, 2], alpha=.125, markersize=2, color=:blue, label="C2 aligned", xlabel="X nm", ylabel="Y nm")
-    @debug "Saving scatterplot of aligned channels to $(joinpath(outdir, "aligned_xy_both_channels.svg"))"
-    Plots.savefig(joinpath(outdir, "aligned_xy_both_channels.svg"))
+    # Plots.scatter(aligned_ptrf[:, 1], aligned_ptrf[:, 2], alpha=.125, markersize=2, color=:red, label="C1 aligned")
+    # Plots.scatter!(cav_aligned_time_full[:, 1], dpi=300, size=(800, 600), cav_aligned_time_full[:, 2], alpha=.125, markersize=2, color=:blue, label="C2 aligned", xlabel="X nm", ylabel="Y nm")
+    # @debug "Saving scatterplot of aligned channels to $(joinpath(outdir, "aligned_xy_both_channels.svg"))"
+    # Plots.savefig(joinpath(outdir, "aligned_xy_both_channels.svg"))
 
     MX=max(maximum(aligned_ptrf[:,1:2]), maximum(cav_aligned_time_full[:,1:2]))
 	MX=max(MX, mx)
@@ -327,10 +327,10 @@ end
 
 
 function writetovtu(fname, pts, meta)
-    @info "Writing $(size(pts)) to $(fname)"
+    # @info "Writing $(size(pts)) to $(fname)"
     # @warn "Todo -- replace with https://juliapackages.com/p/writevtk"
-    s = pyimport("smlmvis.vtuwriter")
-    s.VtuWriter(fname, pts, meta)
+    # s = pyimport("smlmvis.vtuwriter")
+    # s.VtuWriter(fname, pts, meta)
 end
 
 """
