@@ -370,7 +370,14 @@ function project_image(coords3d, nm_per_px; mx=nothing, remove_bead=false, log_s
             npoints += 1
             continue
         end
-        image[Int(round(cx/nm_per_px)), Int(round(cy/nm_per_px))] += 1
+        xc = Int(round(cx/nm_per_px))
+        yc = Int(round(cy/nm_per_px))
+        xc = max(xc, 1)
+        yc = max(yc, 1)
+        xc = min(xc, N)
+        yc = min(yc, N)
+        image[xc, yc] += 1
+        # image[Int(round(cx/nm_per_px)), Int(round(cy/nm_per_px))] += 1
     end
     if npoints > 0
         @warn "You have $npoints negative coordinates!!"
