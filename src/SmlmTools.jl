@@ -196,8 +196,15 @@ function readcsv(filename, args)
         return Matrix(C1[:,1:3]), Matrix(C1[:,4:end])
     else
         @debug "Reading Thunderstorm CSV with x [nm], y [nm], id, frame"
-        pts, meta = Matrix(C1[:,["x [nm]", "y [nm]"]]), Matrix(C1[:,["id", "frame"]])
-        pts=hcat(pts, zeros(size(pts,1)))
+        cols = names(C1)
+        if "z [nm]" in cols
+            @info "Loading Z data from Thunderstorm"
+            pts, meta = Matrix(C1[:,["x [nm]", "y [nm]", "z [nm]"]]), Matrix(C1[:,["id", "frame"]])
+        else
+            @warn "No Z data in Thunderstorm CSV, using 0"
+            pts, meta = Matrix(C1[:,["x [nm]", "y [nm]"]]), Matrix(C1[:,["id", "frame"]])
+            pts=hcat(pts, zeros(size(pts,1)))
+        end
         return pts, meta       
     end
 end
