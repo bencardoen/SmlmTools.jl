@@ -55,7 +55,7 @@ function parse_commandline()
 		"--align", "-a"
             help = "Set to true to do alignment (default = true). Needs a SRM/SMLM type format, e.g. GSD's bin files"
             action = :store_true
-            default = false
+            default = true
 		"--nmpx", "-n"
 			help = "Each pixel is n x n nm wide, default 10"
 			arg_type = Float64

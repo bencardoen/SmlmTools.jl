@@ -219,9 +219,12 @@ end
     If `type` is set to `thunderstorm`, will read columns `x [nm]` and `y [nm]` as well as `frame` and `id`. 
     In this case a zero 3rd dimension is used.
 """
-function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=20000, interval=4000, type="gsd", maxbeaddistancenm=300, maxbeads=2)
+function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=nothing, interval=4000, type="gsd", maxbeaddistancenm=300, maxbeads=2)
 	fext = split(first, ".")[end]
     @info "Loading $first and $second"
+    if isnothing(maxframe)
+        @info "Maximum frame not specified, using all frames"
+    end
     @info "Using $nm_per_px nm per pixel, max bead distance nm=$maxbeaddistancenm nm, max beads=$maxbeads"
     if ! (fext in ["ascii", "bin", "csv"])
         @error "Unsupported files : should be CSV or GSD bin/ascii"
@@ -256,15 +259,24 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 	# _f = joinpath(outdir, "bead.svg")
     # @info "Saving fiducal XY plot in: $(_f)"
     # Plots.savefig(_f)
-
-    MAXFRAME=maxframe
+    if isnothing(maxframe)
+        Max1 = maximum(C1_meta[:,2])
+    else
+        Max1 = maxframe
+    end
+    if isnothing(maxframe)
+        Max2 = maximum(C2_meta[:,2])
+    else
+        Max2 = maxframe
+    end
+    # MAXFRAME=maxframe
     INTERVAL=interval
-    @debug "Change maxframe to be dynamic"
-
+    # @debug "Change maxframe to be dynamic"
+    @info "Max frame set to $Max1 $Max2"
     @info "Computing trajectory of bead over time"
     ### Find the sampled mean location of each fiducial over time
-    sms_c, sts_c = track_sample_mean(C2_fiducial, C2_meta, INTERVAL, MAXFRAME)
-    sms_p, sts_p = track_sample_mean(C1_fiducial, C1_meta, INTERVAL, MAXFRAME)
+    sms_c, sts_c = track_sample_mean(C2_fiducial, C2_meta, INTERVAL, Max1)
+    sms_p, sts_p = track_sample_mean(C1_fiducial, C1_meta, INTERVAL, Max2)
     ### Compute the relative offset over time compared to t=0
     offset_cav = adjust_to_first(sms_c)
     offset_ptrf = adjust_to_first(sms_p)
