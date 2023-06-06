@@ -335,11 +335,12 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     @info "Min $(minimum(pc[:,1:2])) - Max $(maximum(pc[:,1:2])) nm"
     df1a = DataFrame(xnm=pc[:,1], ynm=pc[:,2], znm=pc[:,3])
     df1a[!,:originalfile] .= first
+    qc = copy(cav_aligned_time_full)
     df2a = DataFrame(xnm=qc[:,1], ynm=qc[:,2], znm=qc[:,3])
     df2a[!,:originalfile] .= second
-	CSV.write(joinpath(outdir, "aligned_c1.csv"), df1a)
-	qc = copy(cav_aligned_time_full)
-	CSV.write(joinpath(outdir, "aligned_c2.csv"), df2a)
+    CSV.write(joinpath(outdir, "aligned_c1.csv"), df1a)
+	#qc = copy(cav_al#gned_time_full)
+    CSV.write(joinpath(outdir, "aligned_c2.csv"), df2a)
     @debug "Done"
     @info "Writing to VTU"
     @info "Using filenames $(joinpath(outdir, "aligned_c1.vtu")) and $(joinpath(outdir, "aligned_c2.vtu"))"
