@@ -21,6 +21,7 @@ using Distributions
 using Statistics
 using ImageFiltering
 using ImageMorphology
+using KernelDensity
 using Printf
 using Match
 using HypothesisTests
@@ -168,12 +169,12 @@ function nmz(xs)
     return xs ./ maximum(xs)
 end
 
-function readfile(filename, args)
+function readfile(filename, args, zmode=1, maxprecision=15)
     fext = split(filename, ".")[end]
     @match fext begin
         "bin" => readgsd(filename, args)
         "ascii" => readgsd(filename, args, false)
-        "csv" => readcsv(filename, args)
+        "csv" => readcsv(filename, args, zmode, maxprecision)
         _ => throw(ArgumentError("Unknown file type $fext"))
     end
 end
@@ -188,7 +189,31 @@ function readgsd(filename, args, binary=true)
     return pts, meta
 end
 
-function readcsv(filename, args)
+
+function _univariate_mode(xs)
+    dx = kde(xs)
+    return dx.x[dx.density.==maximum(dx.density)]
+end
+
+function filterthunderstorm(df, zmode=1, maxprecision=15)
+    xs = df[!, "z [nm]"]
+    if sum(xs) != 0
+        @info "3D Data "
+        s = std(xs)
+        m = _univariate_mode(xs)[1]
+        k = zmode
+        df1 = df[(m - k*s) .< df[!, "z [nm]"] .< (m + k*s), :]
+    else
+        @info "2D data -- ignoring Z filtering"
+        df1 = df
+    end
+    df2 = df1[df1[!, "uncertainty [nm]"] .< maxprecision, :]
+    @info "Filtering with Z mode $m std $s maxprecision $maxprecision"
+    @info "$((size(df2)[1]/size(df)[1])*100) % of the data remains"
+    return df2    
+end
+
+function readcsv(filename, args, zmode=1, maxprecision=15)
     @debug "Reading CSV data"
     C1 = CSV.read(filename, DataFrame)
     if args["type"] != "thunderstorm"
@@ -199,6 +224,8 @@ function readcsv(filename, args)
         cols = names(C1)
         if "z [nm]" in cols
             @info "Loading Z data from Thunderstorm"
+            @info "Filtering on max precision $maxprecision"
+            C1 = filterthunderstorm(C1, zmode=zmode, maxprecision=maxprecision)
             pts, meta = Matrix(C1[:,["x [nm]", "y [nm]", "z [nm]"]]), Matrix(C1[:,["id", "frame"]])
         else
             @warn "No Z data in Thunderstorm CSV, using 0"
@@ -208,6 +235,14 @@ function readcsv(filename, args)
         return pts, meta       
     end
 end
+
+
+function filename(f)
+    s=splitpath(f)
+    fname=split(f, ".")[1]
+    return fname
+end
+
 """
 	align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=20000, interval=4000)
 
@@ -219,7 +254,7 @@ end
     If `type` is set to `thunderstorm`, will read columns `x [nm]` and `y [nm]` as well as `frame` and `id`. 
     In this case a zero 3rd dimension is used.
 """
-function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=nothing, interval=4000, type="gsd", maxbeaddistancenm=300, maxbeads=2)
+function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, maxframe=nothing, interval=4000, type="gsd", maxbeaddistancenm=300, maxbeads=2, zmode=1, maxprecision=15)
 	fext = split(first, ".")[end]
     @info "Loading $first and $second"
     if isnothing(maxframe)
@@ -230,8 +265,8 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
         @error "Unsupported files : should be CSV or GSD bin/ascii"
     end
     args = Dict("gsd_nmpx"=>gsd_nmpx, "type"=>type)
-    C1_pts, C1_meta_all = readfile(first, args)
-    C2_pts, C2_meta_all = readfile(second, args)
+    C1_pts, C1_meta_all = readfile(first, args, zmode, maxprecision)
+    C2_pts, C2_meta_all = readfile(second, args, zmode, maxprecision)
     @info "Detecting bead ..."
 	mx = max(maximum(C1_pts[:, 1:2]), maximum(C2_pts[:, 1:2]))
     bd = detect_bead(C1_pts[:, 1:2], C2_pts[:, 1:2], nm_per_px, maxbeads, maxdistance=maxbeaddistancenm, σ=σ)
@@ -338,14 +373,14 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     qc = copy(cav_aligned_time_full)
     df2a = DataFrame(xnm=qc[:,1], ynm=qc[:,2], znm=qc[:,3])
     df2a[!,:originalfile] .= second
-    CSV.write(joinpath(outdir, "aligned_c1.csv"), df1a)
+    CSV.write(joinpath(outdir, "$(filename(first))_aligned_c1.csv"), df1a)
 	#qc = copy(cav_al#gned_time_full)
-    CSV.write(joinpath(outdir, "aligned_c2.csv"), df2a)
+    CSV.write(joinpath(outdir, "$(filename(second))_aligned_c2.csv"), df2a)
     @debug "Done"
     @info "Writing to VTU"
     @info "Using filenames $(joinpath(outdir, "aligned_c1.vtu")) and $(joinpath(outdir, "aligned_c2.vtu"))"
-	writetovtu(joinpath(outdir, "aligned_c1.vtu"), aligned_ptrf, aligned_ptrf[:,3:3])
-	writetovtu(joinpath(outdir, "aligned_c2.vtu"), cav_aligned_time_full, cav_aligned_time_full[:,3:3])
+	writetovtu(joinpath(outdir, "$(filename(first))_aligned_c1.vtu"), aligned_ptrf, aligned_ptrf[:,3:3])
+	writetovtu(joinpath(outdir, "$(filename(second))aligned_c2.vtu"), cav_aligned_time_full, cav_aligned_time_full[:,3:3])
 	return aligned_ptrf, cav_aligned_time_full, C1P, C2P, bd
 end
 
