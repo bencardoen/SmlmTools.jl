@@ -276,8 +276,8 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
         @error "Nearest Beads in both channels are too far apart ($dist nm > $(maxbeaddistancenm)) !"
         throw(ArgumentError("Beads are too far apart ($(dist*nm_per_px) nm > $(maxbeaddistancenm)) !"))
     end
-	Images.save(joinpath(outdir, "C1_notaligned.tif"), N0f16.(nmz(i1[2])))
-	Images.save(joinpath(outdir, "C2_notaligned.tif"), N0f16.(nmz(i2[2])))
+	Images.save(joinpath(outdir, "$(filename(first))_C1_notaligned.tif"), N0f16.(nmz(i1[2])))
+	Images.save(joinpath(outdir, "$(filename(second))_C2_notaligned.tif"), N0f16.(nmz(i2[2])))
     a, b = bd[4], bd[5]
     (minx, miny), (maxx, maxy) = beadcoords(bd[3])
 
@@ -359,8 +359,8 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     C2P = project_image(cav_aligned_time_full, nm_per_px; mx=MX, remove_bead=false, log_scale=false, σnm=σ)
 	
 
-    c1f = joinpath(outdir, "C1.tif")
-    c2f = joinpath(outdir, "C2.tif")
+    c1f = joinpath(outdir, "$(filename(first))_C1.tif")
+    c2f = joinpath(outdir, "$(filename(second))_C2.tif")
     @debug "Saving projection 2D images to $(c1f) and $(c2f)"
     Images.save(c1f, N0f16.(nmz(C1P[2])))
     Images.save(c2f, N0f16.(nmz(C2P[2])))
@@ -380,7 +380,7 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
     @info "Writing to VTU"
     @info "Using filenames $(joinpath(outdir, "aligned_c1.vtu")) and $(joinpath(outdir, "aligned_c2.vtu"))"
 	writetovtu(joinpath(outdir, "$(filename(first))_aligned_c1.vtu"), aligned_ptrf, aligned_ptrf[:,3:3])
-	writetovtu(joinpath(outdir, "$(filename(second))aligned_c2.vtu"), cav_aligned_time_full, cav_aligned_time_full[:,3:3])
+	writetovtu(joinpath(outdir, "$(filename(second))_aligned_c2.vtu"), cav_aligned_time_full, cav_aligned_time_full[:,3:3])
 	return aligned_ptrf, cav_aligned_time_full, C1P, C2P, bd
 end
 
