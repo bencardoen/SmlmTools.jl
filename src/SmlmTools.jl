@@ -239,7 +239,7 @@ end
 
 function filename(f)
     s=splitpath(f)
-    fname=split(f, ".")[1]
+    fname=split(s[end], ".")[1]
     return fname
 end
 
