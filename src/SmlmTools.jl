@@ -195,7 +195,7 @@ function _univariate_mode(xs)
     return dx.x[dx.density.==maximum(dx.density)]
 end
 
-function filterthunderstorm(df, zmode=1, maxprecision=15)
+function filterthunderstorm(df; zmode=1, maxprecision=15)
     xs = df[!, "z [nm]"]
     if sum(xs) != 0
         @info "3D Data "
@@ -225,7 +225,7 @@ function readcsv(filename, args, zmode=1, maxprecision=15)
         if "z [nm]" in cols
             @info "Loading Z data from Thunderstorm"
             @info "Filtering on max precision $maxprecision"
-            C1 = filterthunderstorm(C1, zmode=zmode, maxprecision=maxprecision)
+            C1 = filterthunderstorm(C1; zmode=zmode, maxprecision=maxprecision)
             pts, meta = Matrix(C1[:,["x [nm]", "y [nm]", "z [nm]"]]), Matrix(C1[:,["id", "frame"]])
         else
             @warn "No Z data in Thunderstorm CSV, using 0"
