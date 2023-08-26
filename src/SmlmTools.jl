@@ -111,7 +111,7 @@ function detect_bead(coordsc1, coordsc2, nm_per_px, beads=1; σ=10, maxdistance=
         if distance*nm_per_px < maxdistance
             @info "Found configuration of $i beads with 1 pair close enough"
             # @warn "Removeme"
-            un = dilate(dilate(p1)) .+ dilate(dilate(p2))
+            un = dilate(dilate(dilate(p1))) .+ dilate(dilate(dilate(p2)))
             return d1, d2, un, i1, i2, r1, r2, indices, distance 
         end
     end
@@ -273,11 +273,13 @@ function align(first, second; outdir=".",  nm_per_px=10, σ=10, gsd_nmpx=159.9, 
 
 	_, _, _, _, _, i1, i2, _, dist =bd
     if dist*nm_per_px > maxbeaddistancenm
-        @error "Nearest Beads in both channels are too far apart ($dist nm > $(maxbeaddistancenm)) !"
+        @error "Nearest Beads in both channels are too far apart ($(dist*nm_per_px) nm > $(maxbeaddistancenm)) !"
         throw(ArgumentError("Beads are too far apart ($(dist*nm_per_px) nm > $(maxbeaddistancenm)) !"))
     end
 	Images.save(joinpath(outdir, "$(filename(first))_C1_notaligned.tif"), N0f16.(nmz(i1[2])))
 	Images.save(joinpath(outdir, "$(filename(second))_C2_notaligned.tif"), N0f16.(nmz(i2[2])))
+
+	Images.save(joinpath(outdir, "$(filename(second))_bead_mask.tif"), N0f16.(nmz(bd[3])))
     a, b = bd[4], bd[5]
     (minx, miny), (maxx, maxy) = beadcoords(bd[3])
 
