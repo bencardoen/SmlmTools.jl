@@ -5,14 +5,14 @@ jobs:
   build:
     working_directory: /root/project/SmlmTools.jl   # Clone into a directory whose name matches your Package.
     docker:
-      - image: julia:1.8
+      - image: julia:1.9
     steps:
       - run: pwd
       - run: ls -alsht
       - run: apt update
       - run: apt install python3 -y
       - run: apt install python3-pip -y
-      - run: pip3 install smlmvis
+      - run: pip3 install smlmvis --break-system-packages
       - run:
           command: julia -e 'using Pkg; Pkg.add("Coverage"); Pkg.add(url="https://github.com/bencardoen/SmlmTools.jl.git"); Pkg.test("SmlmTools", coverage=true)'
           environment:
